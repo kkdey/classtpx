@@ -209,15 +209,27 @@ tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
         Wfit_unknown <- tpxweights(n=nrow(X_unknown), p=ncol(X_unknown), xvo=xvo_unknown, wrd=wrd_unknown, doc=doc_unknown,
                                 start=omega_unknown, theta=theta,  verb=0, nef=TRUE, wtol=wtol, tmax=20)
         Wfit[known_indices,] <- omega_known
-        Wfit[-(known_indices),] <- Wfit_unknown}}
+        Wfit[-(known_indices),] <- Wfit_unknown}else{
+          Wfit <- tpxweights(n=nrow(X), p=ncol(X), xvo=xvo, wrd=wrd, doc=doc,
+                             start=omega, theta=theta,  verb=0, nef=TRUE, wtol=wtol, tmax=20);
+        }}
     else{ Wfit <- omega }
 
     ## joint parameter EM update
     move <- tpxEM(X=X, m=m, theta=theta, omega=Wfit, alpha=alpha, admix=admix, grp=grp)
     
     ## quasinewton-newton acceleration
-    QNup <- tpxQN(move=move, Y=Y, X=X, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
-    move <- QNup$move
+    if(length(known_indices) >0){
+        move_unknown <- list(omega=move$omega[-(known_indices),], theta=move$theta)
+        QNup <- tpxQN(move=move_unknown, Y=Y, X=X_unknown, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
+        move_unknown <- QNup$move;
+        omega_unknown <- move_unknown$omega;
+        move$omega[-(1:known_indices),] <- omega_unknown;
+        move$omega[(1:known_indices),] <- omega_known;
+        move$theta <- move_unknown$theta;}else{
+        QNup <- tpxQN(move=move, Y=Y, X=X, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
+        move <- QNup$move
+      }
     Y <- QNup$Y
     
     if(QNup$L < L){  # happens on bad Wfit, so fully reverse
