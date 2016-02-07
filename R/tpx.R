@@ -15,7 +15,7 @@ CheckCounts <- function(counts){
 }
  
 ## Topic estimation and selection for a list of K values
-tpxSelect <- function(X, K, bf, initheta, alpha, tol, kill, verb,
+tpxSelect <- function(X, K, known_indices, omega_known, bf, initheta, alpha, tol, kill, verb,
                       admix=TRUE, grp=NULL, tmax=10000,
                       wtol=10^{-4}, qn=100, nonzero=FALSE, dcut=-10){
 
@@ -28,7 +28,7 @@ tpxSelect <- function(X, K, bf, initheta, alpha, tol, kill, verb,
   ## return fit for single K
   if(length(K)==1 && bf==FALSE){
     if(verb){ cat(paste("Fitting the",K,"topic model.\n")) }
-    fit <-  tpxfit(X=X, theta=initheta, alpha=alpha, tol=tol, verb=verb,
+    fit <-  tpxfit(X=X, known_indices=known_indices, omega_known=omega_known, theta=initheta, alpha=alpha, tol=tol, verb=verb,
                    admix=admix, grp=grp, tmax=tmax, wtol=wtol, qn=qn)
     fit$D <- tpxResids(X=X, theta=fit$theta, omega=fit$omega, grp=grp, nonzero=nonzero)$D
     return(fit)
@@ -61,7 +61,7 @@ tpxSelect <- function(X, K, bf, initheta, alpha, tol, kill, verb,
   for(i in 1:nK){
     
     ## Solve for map omega in NEF space
-    fit <- tpxfit(X=X, theta=initheta, alpha=alpha, tol=tol, verb=verb,
+    fit <- tpxfit(X=X, known_indices=known_indices, omega_known=omega_known, theta=initheta, alpha=alpha, tol=tol, verb=verb,
                   admix=admix, grp=grp, tmax=tmax, wtol=wtol, qn=qn)
     
     BF <- c(BF, tpxML(X=X, theta=fit$theta, omega=fit$omega, alpha=fit$alpha, L=fit$L, dcut=dcut, admix=admix, grp=grp) - null)
@@ -149,7 +149,7 @@ tpxinit <- function(X, initheta, K1, alpha, verb){
                
 ## ** main workhorse function.  Only Called by the above wrappers.
 ## topic estimation for a given number of topics (taken as ncol(theta))
-tpxfit <- function(X, theta, alpha, tol, verb,
+tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
                    admix, grp, tmax, wtol, qn)
 {
   ## inputs and dimensions
@@ -166,9 +166,24 @@ tpxfit <- function(X, theta, alpha, tol, verb,
   wrd <- X$j[order(X$i)]-1
   doc <- c(0,cumsum(as.double(table(factor(X$i, levels=c(1:nrow(X)))))))
   
+  omega <- matrix(0, n, K);
+  
   ## Initialize
-  omega <- tpxweights(n=n, p=p, xvo=xvo, wrd=wrd, doc=doc, start=tpxOmegaStart(X,theta), theta=theta)
-  if(!admix){ omega <- matrix(apply(omega,2, function(w) tapply(w,grp,mean)), ncol=K) }
+  if(length(known_indices)>0) {
+    X_unknown <- X[-(known_indices),];
+    n_unknown <- n - length(known_indices);
+    xvo_unknown <- X_unknown$v[order(X_unknown$i)]
+    wrd_unknown <- X_unknown$j[order(X_unknown$i)]-1
+    doc_unknown <- c(0,cumsum(as.double(table(factor(X_unknown$i, levels=c(1:nrow(X_unknown)))))))
+    
+    omega_unknown <- tpxweights(n=n_unknown, p=p, xvo=xvo_unknown, wrd=wrd_unknown, doc=doc_unknown, start=tpxOmegaStart(X_unknown,theta), theta=theta)
+   if(!admix){ omega_unknown <- matrix(apply(omega_unknown,2, function(w) tapply(w,grp,mean)), ncol=K) }
+    omega[known_indices,] <- omega_known;
+    omega[-(known_indices),] <- omega_unknown;
+  }else{
+    omega <- tpxweights(n=n, p=p, xvo=xvo, wrd=wrd, doc=doc, start=tpxOmegaStart(X,theta), theta=theta)
+    if(!admix){ omega <- matrix(apply(omega,2, function(w) tapply(w,grp,mean)), ncol=K) }
+  }
 
   ## tracking
   iter <- 0
@@ -187,8 +202,14 @@ tpxfit <- function(X, theta, alpha, tol, verb,
   while( update  && iter < tmax ){ 
 
     ## sequential quadratic programming for conditional Y solution
-    if(admix && wtol > 0){ Wfit <- tpxweights(n=nrow(X), p=ncol(X), xvo=xvo, wrd=wrd, doc=doc,
-                                start=omega, theta=theta,  verb=0, nef=TRUE, wtol=wtol, tmax=20) }
+    if(admix && wtol > 0){ 
+      Wfit <- matrix(0, n, K);
+      if(length(known_indices)>0) {
+        X_unknown <- X[-(known_indices),];
+        Wfit_unknown <- tpxweights(n=nrow(X_unknown), p=ncol(X_unknown), xvo=xvo_unknown, wrd=wrd_unknown, doc=doc_unknown,
+                                start=omega_unknown, theta=theta,  verb=0, nef=TRUE, wtol=wtol, tmax=20)
+        Wfit[known_indices,] <- omega_known
+        Wfit[-(known_indices),] <- Wfit_unknown}}
     else{ Wfit <- omega }
 
     ## joint parameter EM update
@@ -282,12 +303,13 @@ tpxEM <- function(X, m, theta, omega, alpha, admix, grp)
                          Xhat=as.double(Xhat), doc=as.integer(X$i-1), wrd=as.integer(X$j-1),
                         zj = as.double(rep(0,K*p)), zi = as.double(rep(0,K*n)), PACKAGE="maptpx")
              theta <- normalize(matrix(Zhat$zj+alpha, ncol=K), byrow=FALSE)
-             omega <- normalize(matrix(Zhat$zi+1/K, ncol=K)) }
-  else{
+            # omega <- normalize(matrix(Zhat$zi+1/K, ncol=K)) 
+             } else{
     qhat <- tpxMixQ(X, omega, theta, grp, qhat=TRUE)$qhat
     ## EM update
     theta <- normalize(tcrossprod_simple_triplet_matrix( t(X), t(qhat) ) + alpha, byrow=FALSE)
-    omega <- normalize(matrix(apply(qhat*m,2, function(x) tapply(x,grp,sum)), ncol=K)+1/K )  }
+    #omega <- normalize(matrix(apply(qhat*m,2, function(x) tapply(x,grp,sum)), ncol=K)+1/K )  
+    }
     
   return(list(theta=theta, omega=omega)) }
 

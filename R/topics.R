@@ -1,10 +1,14 @@
 ##### Estimation for Topic Models ######
 
 ## intended main function; provides defaults and selects K via marginal lhd
-topics <- function(counts, K, shape=NULL, initopics=NULL, tol=0.1, 
+class_topics <- function(counts, K, known_indices=NULL, omega_known=NULL, shape=NULL, initopics=NULL, tol=0.1, 
                    bf=FALSE, kill=2, ord=TRUE, verb=1, ...)
   ## tpxselect defaults: tmax=10000, wtol=10^(-4), qn=100, grp=NULL, admix=TRUE, nonzero=FALSE, dcut=-10
 {
+  if(is.null(known_indices) & !is.null(omega_known)) stop("no indices specified by user but omega is not empty")
+  if(!is.null(known_indices) & is.null(omega_known)) stop("some indices specified by user as known but omega known is empty")
+  if(length(known_indices) != dim(omega_known)[1]) stop("size of indices known and the omega known provided have a disparity")
+  
   X <- CheckCounts(counts)
   p <- ncol(X) 
   if(verb>0)
@@ -21,7 +25,7 @@ topics <- function(counts, K, shape=NULL, initopics=NULL, tol=0.1,
   initopics <- tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], initopics, K[1], shape, verb)
   
   ## either search for marginal MAP K and return bayes factors, or just fit
-  tpx <- tpxSelect(X, K, bf, initopics, alpha=shape, tol, kill, verb, ...)
+  tpx <- tpxSelect(X, K, known_indices, omega_known, bf, initopics, alpha=shape, tol, kill, verb, ...)
   K <- tpx$K
   
   ## clean up and out
