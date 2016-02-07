@@ -43,7 +43,7 @@ class_topics <- function(counts, K, known_indices=NULL, omega_known=NULL, shape=
 
  
 ## S3 method predict function
-predict.topics <- function(object, newcounts, loglhd=FALSE, ...)
+class_predict.topics <- function(object, newcounts, loglhd=FALSE, ...)
   ## tpxweights optional arguments and defauls are verb=FALSE, nef=TRUE, wtol=10^{-5}, tmax=1000
 {
   if(is.vector(newcounts)){ newcounts <- matrix(newcounts, nrow=1) }
