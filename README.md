@@ -6,4 +6,4 @@ The application of this semi-supervised approach lies mainly in Biological appli
 
 The code in this repository is flexible and allows for fitting the model where no information is available on any of the samples (no cell is FACS sorted) and that would correspond to the unsupervised approach as in `maptpx` due to Matt Taddy (2012).
 
-At the other end, we may have all cells FACS sorted in which case we have a classifier and this we can use for `class_predict.topics` for classification. 
+At the other end, we may have all cells FACS sorted in which case we have a classifier and this we can use for `predict.class_topics` for classification. 
