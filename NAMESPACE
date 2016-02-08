@@ -1,11 +1,11 @@
-useDynLib(maptpx)
+useDynLib(classtpx)
 import(slam)
 
 export(stm_tfidf,
        normalize,
        rdir,
-       topics,
-       predict.topics,
+       class_topics,
+       class_predict.topics,
        topicVar,
        expit,
        logit)

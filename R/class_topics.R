@@ -221,7 +221,7 @@ plot.topics <- function(x, type=c("weight","resid"), group=NULL, labels=NULL,
 ## logit and expit, treating first element as null
 logit <- function(prob){
   f <- function(p) .C("Rlogit", d=as.integer(d), 
-    eta=double(d-1), prob=as.double(p), PACKAGE="maptpx")$eta
+    eta=double(d-1), prob=as.double(p), PACKAGE="classtpx")$eta
   prob[prob < 1e-10] <- 1e-10
   prob[1-prob < 1e-10] <- 1-1e-10
   if(is.matrix(prob) || is.data.frame(prob)){
@@ -236,7 +236,7 @@ logit <- function(prob){
 
 expit <- function(eta){
   f <- function(e) .C("Rexpit", d=as.integer(d), prob=double(d), 
-    eta=as.double(e), PACKAGE="maptpx")$prob
+    eta=as.double(e), PACKAGE="classtpx")$prob
   eta[eta==Inf] <- 1e10
   eta[eta==-Inf] <- -1e10
   if(is.matrix(eta) || is.data.frame(eta)){
@@ -274,7 +274,7 @@ topicVar <- function(counts, theta, omega){
                   q = as.double(q),
                   N = as.integer(length(q)),
                   H = double(n*(K-1)^2),
-                  PACKAGE="maptpx")$H,
+                  PACKAGE="classtpx")$H,
                dim=c(K-1,K-1,n))
 
   S <- array(apply(H, 3, function(h) tryCatch(solve(h), error=function(e) solve(h + diag(.00001,K-1))) ),
