@@ -5,11 +5,12 @@ export(stm_tfidf,
        normalize,
        rdir,
        class_topics,
-       class_predict.topics,
-       topicVar,
+       predict.class_topics,
+       class_topicVar,
        expit,
-       logit)
+       logit
+       )
 
-S3method(plot,topics)
-S3method(predict,topics)
-S3method(summary,topics)
+S3method(plot,class_topics)
+S3method(predict,class_topics)
+S3method(summary,class_topics)

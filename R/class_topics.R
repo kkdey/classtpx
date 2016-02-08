@@ -3,7 +3,7 @@
 ## intended main function; provides defaults and selects K via marginal lhd
 class_topics <- function(counts, K, known_indices=NULL, omega_known=NULL, shape=NULL, initopics=NULL, tol=0.1, 
                    bf=FALSE, kill=2, ord=TRUE, verb=1, ...)
-  ## tpxselect defaults: tmax=10000, wtol=10^(-4), qn=100, grp=NULL, admix=TRUE, nonzero=FALSE, dcut=-10
+  ## class.tpxselect defaults: tmax=10000, wtol=10^(-4), qn=100, grp=NULL, admix=TRUE, nonzero=FALSE, dcut=-10
 {
   if(is.null(known_indices) & !is.null(omega_known)) stop("no indices specified by user but omega is not empty")
   if(!is.null(known_indices) & is.null(omega_known)) stop("some indices specified by user as known but omega known is empty")
@@ -22,29 +22,29 @@ class_topics <- function(counts, K, known_indices=NULL, omega_known=NULL, shape=
   K <- sort(K)
  
   ## initialize
-  initopics <- tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], initopics, K[1], shape, verb)
+  initopics <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], initopics, K[1], shape, verb)
   
   ## either search for marginal MAP K and return bayes factors, or just fit
-  tpx <- tpxSelect(X, K, known_indices, omega_known, bf, initopics, alpha=shape, tol, kill, verb, ...)
-  K <- tpx$K
+  class.tpx <- class.tpxSelect(X, K, known_indices, omega_known, bf, initopics, alpha=shape, tol, kill, verb, ...)
+  K <- class.tpx$K
   
   ## clean up and out
-  if(ord){ worder <- order(col_sums(tpx$omega), decreasing=TRUE) } # order by decreasing usage
+  if(ord){ worder <- order(col_sums(class.tpx$omega), decreasing=TRUE) } # order by decreasing usage
   else{ worder <- 1:K }
   ## Main parameters
-  theta=matrix(tpx$theta[,worder], ncol=K, dimnames=list(phrase=dimnames(X)[[2]], topic=paste(1:K)) )
-  omega=matrix(tpx$omega[,worder], ncol=K, dimnames=list(document=NULL, topic=paste(1:K)) )
+  theta=matrix(class.tpx$theta[,worder], ncol=K, dimnames=list(phrase=dimnames(X)[[2]], topic=paste(1:K)) )
+  omega=matrix(class.tpx$omega[,worder], ncol=K, dimnames=list(document=NULL, topic=paste(1:K)) )
   if(nrow(omega)==nrow(X)){ dimnames(omega)[[1]] <- dimnames(X)[[1]] }
   
   ## topic object
-  out <- list(K=K, theta=theta, omega=omega, BF=tpx$BF, D=tpx$D, X=X)
+  out <- list(K=K, theta=theta, omega=omega, BF=class.tpx$BF, D=class.tpx$D, X=X)
   class(out) <- "topics"
   invisible(out) }
 
  
 ## S3 method predict function
-class_predict.topics <- function(object, newcounts, loglhd=FALSE, ...)
-  ## tpxweights optional arguments and defauls are verb=FALSE, nef=TRUE, wtol=10^{-5}, tmax=1000
+predict.class_topics <- function(object, newcounts, loglhd=FALSE, ...)
+  ## class.tpxweights optional arguments and defauls are verb=FALSE, nef=TRUE, wtol=10^{-5}, tmax=1000
 {
   if(is.vector(newcounts)){ newcounts <- matrix(newcounts, nrow=1) }
   if(class(newcounts)[1] == "TermDocumentMatrix"){ newcounts <- t(newcounts) }
@@ -56,28 +56,28 @@ class_predict.topics <- function(object, newcounts, loglhd=FALSE, ...)
     theta <- object$theta
     if(nrow(theta) != ncol(X)){ stop("Dimension mismatch: nrow(theta) != ncol(X)") }
     if(nrow(object$X) != nrow(object$omega)) # simple mixture
-      { Q <- matrix(tpxMixQ(X, omega=object$omega, theta=theta, ...)$lQ, ncol=ncol(theta))
+      { Q <- matrix(class.tpxMixQ(X, omega=object$omega, theta=theta, ...)$lQ, ncol=ncol(theta))
         return( (1:ncol(theta))[apply(Q,1,which.max)] ) } 
   }
   else{ theta <- object }
 
-  start <- tpxOmegaStart(X=X, theta=theta)
+  start <- class.tpxOmegaStart(X=X, theta=theta)
   
   ## re-order xvec in doc-blocks, and build indices
   doc <- c(0,cumsum(as.double(table(factor(X$i, levels=c(1:nrow(X)))))))
   xvo <- X$v[order(X$i)]
   wrd <- X$j[order(X$i)]-1
 
-  W <- tpxweights(n=nrow(X), p=ncol(X), xvo=xvo, wrd=wrd, doc=doc, start=start, theta=theta, ...)
+  W <- class.tpxweights(n=nrow(X), p=ncol(X), xvo=xvo, wrd=wrd, doc=doc, start=start, theta=theta, ...)
 
   if(loglhd){
-    L <- sum( X$v*log(tpxQ(theta=theta, omega=W, doc=X$i, wrd=X$j)) )
+    L <- sum( X$v*log(class.tpxQ(theta=theta, omega=W, doc=X$i, wrd=X$j)) )
     return(list(W=W, L=L)) }
   else{ return(W) }
 }
 
 ## S3 method summary function
-summary.topics <- function(object, nwrd=5, tpk=NULL, verb=TRUE, ...){
+summary.class_topics <- function(object, nwrd=5, tpk=NULL, verb=TRUE, ...){
 
     
   K <- object$K
@@ -133,7 +133,7 @@ TOPICOLS <- matrix(nrow=6,
 
               	
 
-plot.topics <- function(x, type=c("weight","resid"), group=NULL, labels=NULL, 
+plot.class_topics <- function(x, type=c("weight","resid"), group=NULL, labels=NULL, 
                         col=NULL, xlab=NULL, ylab=NULL, main=NULL, tpk=NULL,
                         lgd.K=NULL, cex.lgdc = 1, cex.lgdt = 1, cex.rmar= 1, ...){
 
@@ -143,7 +143,7 @@ plot.topics <- function(x, type=c("weight","resid"), group=NULL, labels=NULL,
     if(is.null(xlab)){ xlab="abs( adusted residuals )" }
     if(is.null(main)){ main="" }
 
-    resids <- tpxResids(x$X, theta=x$theta, omega=x$omega, ...)$r
+    resids <- class.tpxResids(x$X, theta=x$theta, omega=x$omega, ...)$r
 
     hist(resids, col=col, border=grey(.9),
          xlab=xlab,
@@ -252,7 +252,7 @@ expit <- function(eta){
 
 
 ### topic weight variance matrix (in NEF parametrization)
-topicVar <- function(counts, theta, omega){
+class_topicVar <- function(counts, theta, omega){
   X <- CheckCounts(counts)
   if(nrow(omega) != nrow(X)) stop("omega does not match counts")
   if(ncol(omega) != ncol(theta)) stop("omega does not match theta")
@@ -261,7 +261,7 @@ topicVar <- function(counts, theta, omega){
   n <- nrow(X)
   p <- nrow(theta)
   
-  q <- tpxQ(theta=theta, omega=omega, doc=X$i, wrd=X$j)
+  q <- class.tpxQ(theta=theta, omega=omega, doc=X$i, wrd=X$j)
   H <- array(.C("RnegHW",
                   n = as.integer(n),
                   p = as.integer(p),
