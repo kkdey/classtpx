@@ -94,7 +94,7 @@ class.tpxSelect <- function(X, K, known_indices, omega_known, bf, initheta, alph
               BF=BF, D=D, K=K[which.max(BF)])) }
 
 ## theta initialization
-class.tpxinit <- function(X, initheta, K1, alpha, verb){
+class.tpxinit <- function(X, known_indices, omega_known, initheta, K1, alpha, verb){
 ## initheta can be matrix, or c(nK, tmax, tol, verb)
   
   if(is.matrix(initheta)){
@@ -136,8 +136,9 @@ class.tpxinit <- function(X, initheta, K1, alpha, verb){
   for(i in 1:nK){
 
     ## Solve for map omega in NEF space
-    fit <- class.tpxfit(X=X, theta=initheta, alpha=alpha, tol=tol, verb=verb,
-                  admix=TRUE, grp=NULL, tmax=tmax, wtol=-1, qn=-1)
+    fit <- class.tpxfit(X=X, known_indices=known_indices, omega_known=omega_known,
+                        theta=initheta, alpha=alpha, tol=tol, verb=verb,
+                        admix=TRUE, grp=NULL, tmax=tmax, wtol=-1, qn=-1)
     if(verb>1){ cat(paste(Kseq[i],",", sep="")) }
 
     if(i<nK){ initheta <- class.tpxThetaStart(X, fit$theta, fit$omega, Kseq[i+1]) }
@@ -171,7 +172,7 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
   ## Initialize
   if(length(known_indices)>0) {
     X_unknown <- X[-(known_indices),];
-    n_unknown <- n - length(known_indices);
+    n_unknown <- nrow(X_unknown);
     xvo_unknown <- X_unknown$v[order(X_unknown$i)]
     wrd_unknown <- X_unknown$j[order(X_unknown$i)]-1
     doc_unknown <- c(0,cumsum(as.double(table(factor(X_unknown$i, levels=c(1:nrow(X_unknown)))))))
@@ -224,8 +225,8 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
         QNup <- class.tpxQN(move=move_unknown, Y=Y, X=X_unknown, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
         move_unknown <- QNup$move;
         omega_unknown <- move_unknown$omega;
-        move$omega[-(1:known_indices),] <- omega_unknown;
-        move$omega[(1:known_indices),] <- omega_known;
+        move$omega[-(known_indices),] <- omega_unknown;
+        move$omega[known_indices,] <- omega_known;
         move$theta <- move_unknown$theta;}else{
         QNup <- class.tpxQN(move=move, Y=Y, X=X, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
         move <- QNup$move
