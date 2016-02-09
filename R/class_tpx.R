@@ -367,8 +367,10 @@ class.tpxQN <- function(move, Y, X, alpha, verb, admix, grp, doqn)
 ## unnormalized log posterior (objective function)
 class.tpxlpost <- function(X, theta, omega, alpha, admix=TRUE, grp=NULL)
 {
+  K <- ncol(theta);
+  omega[omega<=0] <- 1e-20;
+  theta[theta<=0] <- 1e-20;
   if(!inherits(X,"simple_triplet_matrix")){ stop("X needs to be a simple_triplet_matrix.") }
-  K <- ncol(theta)
 
   if(admix){ L <- sum( X$v*log(class.tpxQ(theta=theta, omega=omega, doc=X$i, wrd=X$j)) ) }
   else{ L <- sum(class.tpxMixQ(X, omega, theta, grp)$lqlhd) }
