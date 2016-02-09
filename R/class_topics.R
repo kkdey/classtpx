@@ -23,7 +23,7 @@ class_topics <- function(counts, K, known_indices=NULL, omega_known=NULL, shape=
  
   ## initialize
   unknown_indices <- setdiff(1:nrow(X), known_indices);
-  initopics <- class.tpxinit(X[c(known_indices, unknown_indices[1:min(ceiling(length(unknown_indices)*.05),100)]),], 1:length(known_indices), omega_known, initopics, K[1], shape, verb)
+  initopics <- class.tpxinit(X[unknown_indices[1:min(ceiling(length(unknown_indices)*.05),100)],], known_indices = NULL, omega_known=NULL, initopics, K[1], shape, verb)
   
   ## either search for marginal MAP K and return bayes factors, or just fit
   class.tpx <- class.tpxSelect(X, K, known_indices, omega_known, bf, initopics, alpha=shape, tol, kill, verb, ...)

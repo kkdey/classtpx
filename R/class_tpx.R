@@ -106,24 +106,19 @@ class.tpxinit <- function(X, known_indices, omega_known, initheta, K1, alpha, ve
     if(nrow(alpha)!=ncol(X) || ncol(alpha)!=K1){ stop("bad matrix alpha dimensions; check your K") }
     return(normalize(alpha, byrow=FALSE)) }
 
-  if(is.null(initheta)){ ilength <- K1-1 }
-  else{ ilength <- initheta[1] }
+  if(is.null(initheta)){ ilength <- K1-1 } else{ ilength <- initheta[1] }
   if(ilength < 1){ ilength <- 1 }
 
   ## set number of initial steps
-  if(length(initheta)>1){ tmax <- initheta[2] }
-  else{ tmax <- 3 }
+  if(length(initheta)>1){ tmax <- initheta[2] }else{ tmax <- 3 }
   ## set the tolerance
-  if(length(initheta)>2){ tol <- initheta[3] }
-  else{ tol <- 0.5 }
+  if(length(initheta)>2){ tol <- initheta[3] }else{ tol <- 0.5 }
   ## print option
-  if(length(initheta)>3){ verb <- initheta[4] }
-  else{ verb <- 0 }
+  if(length(initheta)>3){ verb <- initheta[4] }else{ verb <- 0 }
   
 
   if(verb){ cat("Building initial topics") 
-            if(verb > 1){ cat(" for K = ") }
-            else{ cat("... ") } }
+            if(verb > 1){ cat(" for K = ") } else{ cat("... ") } }
             
   nK <- length( Kseq <-  unique(ceiling(seq(2,K1,length=ilength))) )
   initheta <- class.tpxThetaStart(X, matrix(col_sums(X)/sum(X), ncol=1), matrix(rep(1,nrow(X))), 2)
