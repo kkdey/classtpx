@@ -208,8 +208,7 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
         Wfit[-(known_indices),] <- Wfit_unknown}else{
           Wfit <- class.tpxweights(n=nrow(X), p=ncol(X), xvo=xvo, wrd=wrd, doc=doc,
                              start=omega, theta=theta,  verb=0, nef=TRUE, wtol=wtol, tmax=20);
-        }}
-    else{ Wfit <- omega }
+        }}else{ Wfit <- omega }
 
     ## joint parameter EM update
     move <- class.tpxEM(X=X, m=m, theta=theta, omega=Wfit, alpha=alpha, admix=admix, grp=grp)
@@ -327,7 +326,11 @@ class.tpxQN <- function(move, Y, X, alpha, verb, admix, grp, doqn)
   ## always check likelihood
   L <- class.tpxlpost(X=X, theta=move$theta, omega=move$omega,
                 alpha=alpha, admix=admix, grp=grp) 
-
+  move$omega[move$omega<=0] <- 1e-04;
+  move$theta[move$theta<=0] <- 1e-04;
+  move$omega <- normalize(move$omega);
+  move$theta <- normalize(move$theta, byrow=FALSE);
+  
   if(doqn < 0){ return(list(move=move, L=L, Y=Y)) }
 
   ## update Y accounting
