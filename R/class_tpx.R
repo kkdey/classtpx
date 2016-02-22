@@ -236,7 +236,7 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
   
     ## calculate dif
     dif <- (QNup$L-L)
-    print(dif)
+    #print(dif)
     L <- QNup$L
     
         
