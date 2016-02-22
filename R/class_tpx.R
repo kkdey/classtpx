@@ -221,7 +221,8 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
         omega_unknown <- move_unknown$omega;
         move$omega[-(known_indices),] <- omega_unknown;
         move$omega[known_indices,] <- omega_known;
-        move$theta <- move_unknown$theta;}else{
+        move$theta <- move_unknown$theta;
+        QNup$L <-  class.tpxlpost(X=X, theta=move$theta, omega=move$omega, alpha=alpha, admix=admix, grp=grp)}else{
         QNup <- class.tpxQN(move=move, Y=Y, X=X, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
         move <- QNup$move
       }
@@ -231,10 +232,11 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
       if(verb > 10){ cat("_reversing a step_") }
       move <- class.tpxEM(X=X, m=m, theta=theta, omega=omega, alpha=alpha, admix=admix, grp=grp)
       QNup$L <-  class.tpxlpost(X=X, theta=move$theta, omega=move$omega, alpha=alpha, admix=admix, grp=grp) }
-
+      #L <-  class.tpxlpost(X=X, theta=theta, omega=omega, alpha=alpha, admix=admix, grp=grp) 
+  
     ## calculate dif
     dif <- (QNup$L-L)
-   
+    print(dif)
     L <- QNup$L
     
         
@@ -326,8 +328,8 @@ class.tpxQN <- function(move, Y, X, alpha, verb, admix, grp, doqn)
   ## always check likelihood
   L <- class.tpxlpost(X=X, theta=move$theta, omega=move$omega,
                 alpha=alpha, admix=admix, grp=grp) 
-  move$omega[move$omega<=0] <- 1e-04;
-  move$theta[move$theta<=0] <- 1e-04;
+  move$omega[move$omega<=0] <- 1e-20;
+  move$theta[move$theta<=0] <- 1e-20;
   move$omega <- normalize(move$omega);
   move$theta <- normalize(move$theta, byrow=FALSE);
   
@@ -375,8 +377,8 @@ class.tpxlpost <- function(X, theta, omega, alpha, admix=TRUE, grp=NULL)
   theta[theta<=0] <- 1e-20;
   if(!inherits(X,"simple_triplet_matrix")){ stop("X needs to be a simple_triplet_matrix.") }
 
-  if(admix){ L <- sum( X$v*log(class.tpxQ(theta=theta, omega=omega, doc=X$i, wrd=X$j)) ) }
-  else{ L <- sum(class.tpxMixQ(X, omega, theta, grp)$lqlhd) }
+  if(admix){ L <- sum( X$v*log(class.tpxQ(theta=theta, omega=omega, doc=X$i, wrd=X$j)) ) 
+  }else{ L <- sum(class.tpxMixQ(X, omega, theta, grp)$lqlhd) }
   if(is.null(nrow(alpha))){ if(alpha != 0){ L <- L + sum(alpha*log(theta))  } } # unnormalized prior
   L <- L + sum(log(omega))/K 
   
