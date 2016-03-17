@@ -165,7 +165,7 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
   omega <- matrix(0, n, K);
   
   ## Initialize
-  if(length(known_indices)>0) {
+  if(!is.null(omega_known)) {
     X_unknown <- X[-(known_indices),];
     n_unknown <- nrow(X_unknown);
     xvo_unknown <- X_unknown$v[order(X_unknown$i)]
@@ -200,7 +200,7 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
     ## sequential quadratic programming for conditional Y solution
     if(admix && wtol > 0){ 
       Wfit <- matrix(0, n, K);
-      if(length(known_indices)>0) {
+      if(!is.null(omega_known)) {
         X_unknown <- X[-(known_indices),];
         Wfit_unknown <- class.tpxweights(n=nrow(X_unknown), p=ncol(X_unknown), xvo=xvo_unknown, wrd=wrd_unknown, doc=doc_unknown,
                                 start=omega_unknown, theta=theta,  verb=0, nef=TRUE, wtol=wtol, tmax=20)
@@ -210,11 +210,16 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
                              start=omega, theta=theta,  verb=0, nef=TRUE, wtol=wtol, tmax=20);
         }}else{ Wfit <- omega }
 
+    move <- list(theta=theta, omega=Wfit)
+    
     ## joint parameter EM update
+    if(!is.null(theta_knowm)){
     move <- class.tpxEM(X=X, m=m, theta=theta, omega=Wfit, alpha=alpha, admix=admix, grp=grp)
+    }
+    
     
     ## quasinewton-newton acceleration
-    if(length(known_indices) >0){
+    if(!is.null(omega_known)){
         move_unknown <- list(omega=move$omega[-(known_indices),], theta=move$theta)
         QNup <- class.tpxQN(move=move_unknown, Y=Y, X=X_unknown, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
         move_unknown <- QNup$move;
@@ -222,15 +227,21 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
         move$omega[-(known_indices),] <- omega_unknown;
         move$omega[known_indices,] <- omega_known;
         move$theta <- move_unknown$theta;
-        QNup$L <-  class.tpxlpost(X=X, theta=move$theta, omega=move$omega, alpha=alpha, admix=admix, grp=grp)}else{
-        QNup <- class.tpxQN(move=move, Y=Y, X=X, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
-        move <- QNup$move
+        QNup$L <-  class.tpxlpost(X=X, theta=move$theta, omega=move$omega, alpha=alpha, admix=admix, grp=grp)
+        } else if (!is.null(theta_known)){
+          QNup <- class.tpxQN(move=move, Y=Y, X=X, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
+          move$omega <- QNup$move$omega;
+        } else{
+          QNup <- class.tpxQN(move=move, Y=Y, X=X, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
+          move <- QNup$move;
       }
     Y <- QNup$Y
     
     if(QNup$L < L){  # happens on bad Wfit, so fully reverse
       if(verb > 10){ cat("_reversing a step_") }
-      move <- class.tpxEM(X=X, m=m, theta=theta, omega=omega, alpha=alpha, admix=admix, grp=grp)
+      if(!is.null(theta_knowm)){
+        move <- class.tpxEM(X=X, m=m, theta=theta, omega=omega, alpha=alpha, admix=admix, grp=grp)
+      }
       QNup$L <-  class.tpxlpost(X=X, theta=move$theta, omega=move$omega, alpha=alpha, admix=admix, grp=grp) }
       #L <-  class.tpxlpost(X=X, theta=theta, omega=omega, alpha=alpha, admix=admix, grp=grp) 
   

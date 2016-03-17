@@ -1,0 +1,175 @@
+---
+title: 'Bagged Topic models: Simulation 1'
+author: "Kushal K Dey"
+date: "March 6, 2016"
+output: html_document
+---
+
+## Overview
+
+We want a faster way of doing classification using topic models. Usually there are lots of genes/ features in the dataset but only a handful of them drive the classification. Our aim would be to choose variables judiciously and also fit the `classtpx` models for small batches of variables at a time, build an ensemble and then average over the results to get the final output.
+
+## Simulation Set up
+
+```{r echo=TRUE, eval=TRUE}
+n.out <- 1000
+omega_sim <- rbind( cbind( rep(1, n.out), rep(0, n.out)), 
+                    cbind( rep(0, n.out), rep(1, n.out)),
+                    cbind( seq(0.6, 0.4, length.out = n.out), 
+                           1- seq(0.6, 0.4,length.out=n.out)) )
+dim(omega_sim)
+
+K <- dim(omega_sim)[2]
+barplot(t(omega_sim), 
+        col = 2:(K+1),
+        axisnames = F, space = 0, 
+        border = NA, 
+        main=paste("No. of clusters=", K),
+        las=1, ylim = c(0,1), cex.axis=1.5,cex.main=1.4)
+
+freq <- rbind( c(0.1, 0.2, rep(0.70/998, 998)),
+               c(rep(0.70/998,998), 0.1, 0.2) )
+str(freq)
+
+counts <- t( do.call(cbind,
+                     lapply(1:dim(omega_sim)[1], 
+                            function(x) 
+                                rmultinom(1,1000,prob=omega_sim[x,]%*%freq))))
+dim(counts)
+```
+
+We apply `classtpx` model on the counts data with the first 100 genes in one cluster and the genes from 1000 to 1100 in another cluster. 
+
+```{r echo=TRUE, eval=TRUE}
+library(classtpx)
+known_indices <- c(1:100,1001:1100);
+omega_known <- omega_sim[known_indices,]
+system.time(Topic_clus <- classtpx::class_topics(
+    counts, 
+    K, 
+    known_indices = known_indices, 
+    omega_known = omega_known, 
+    tol=0.001))
+```
+
+We plot the Structure plot of the omega matrix.
+
+```{r echo=TRUE, eval=TRUE}
+# These are estimated gene relative expression
+docweights <- Topic_clus$omega
+
+library(permute)
+library(BioPhysConnectoR)
+
+# Decide on the correspondance of the simulated
+# and of the estimated relative expression matrix
+# 
+# We consider all possible cluster ordering in the 
+# estimated relative expression matrix and select
+# the relative expression matrix with the nearest
+# distance to the simulate relative experssion matrix
+# (forbieus norm)
+
+perm_set <- rbind(1:K,allPerms(1:K))
+diff <- array(0,dim(perm_set)[1]) 
+for (p in 1:dim(perm_set)[1])
+{
+    temp <- docweights[, perm_set[p,]]
+    diff[p] <- fnorm(temp,omega_sim)
+}
+
+p_star <- which(diff==min(diff))
+docweights <- docweights[,perm_set[p_star,]]
+
+barplot(t(docweights),
+        col = 2:(K+1),
+        axisnames = F, space = 0, border = NA, 
+        main=paste("No. of clusters=", K),
+        las=1, ylim=c(0,1), cex.axis=1.5, cex.main=1.4)
+```
+
+## Bagged topic models
+
+We form $20$ batches of $50$ genes each and then for each batch, we fit the topic model in parallel.
+
+```{r echo=TRUE, eval=TRUE}
+
+num <- 50
+system.time(bag_topics <- parallel::mclapply(1:20, function(l)
+                           {
+                                counts_temp <- counts[,((l-1)*num+1):(l*num)];
+                                index <- which(rowSums(counts_temp)==0);
+                                if(length(index)!=0){
+                                  counts_temp[index,]=1;
+                                }
+                                out <- classtpx::class_topics(counts_temp,                                                                   K=2,
+                                                 known_indices=known_indices,                                                  omega_known = omega_known,                                                    tol=0.1);
+                                return(out)
+                           }))
+
+```
+
+We build strength measures for the clusters. 
+
+```{r echo=TRUE, eval=TRUE}
+#barplot(t(bag_topics[[10]]$omega),
+#        col = 2:(K+1),
+#        axisnames = F, space = 0, border = NA, 
+#        main=paste("No. of clusters=", K),
+#        las=1, ylim=c(0,1), cex.axis=1.5, cex.main=1.4)
+
+#CountClust::compare_omega(bag_topics[[1]]$omega[-known_indices,],omega_sim[-known_indices,])$cor.information_content
+
+rep.row<-function(x,n){
+   matrix(rep(x,each=n),nrow=n)
+}
+rep.col<-function(x,n){
+   matrix(rep(x,each=n), ncol=n, byrow=TRUE)
+}
+
+
+omega_null <- rep.row(rep(1/K,K),dim(counts)[1])
+
+#null_kl_rows <- rowSums(CountClust::compare_omega(bag_topics[[1]]$omega[-known_indices,],omega_null[-known_indices,])$kl.dist)
+#bag_strength <- exp(-(max(null_kl_rows)/min(null_kl_rows)));
+
+bag_strength_list <- sapply(1:20, function(l)
+                                  {
+                                             bag_strength_1 <- CountClust::compare_omega(bag_topics[[l]]$omega[-known_indices,],omega_sim[-known_indices,])$cor.information_content 
+                                             suppressWarnings(null_kl_rows <- rowSums(CountClust::compare_omega(bag_topics[[l]]$omega[-known_indices,],omega_null[-known_indices,])$kl.dist))
+                                              bag_strength_2 <- exp(-(max(null_kl_rows)/min(null_kl_rows)));
+                                              bag_strength <- (1-bag_strength_2)*bag_strength_1;
+                                              return(bag_strength)
+
+                                  })
+
+```
+
+We just pool the batches with high values of cluster information and perform topic model and plot the omega proportion as Structure plot. 
+
+```{r echo=TRUE, eval=TRUE}
+counts_test <- counts[,c(1:50,950:1000)];
+baggedTopic_clus <- classtpx::class_topics(counts_test,                                                                   K=2,
+                                                 known_indices=known_indices,                                                  omega_known = omega_known,                                                    tol=0.1);
+
+barplot(t(baggedTopic_clus$omega),
+        col = 2:(K+1),
+        axisnames = F, space = 0, border = NA, 
+        main=paste("No. of clusters=", K),
+        las=1, ylim=c(0,1), cex.axis=1.5, cex.main=1.4)
+```
+
+We further take a smaller subset of genes (assuming we had performed the gene level strength). Here we just assume the first 10 and the last 10 genes.
+
+```{r echo=TRUE, eval=TRUE}
+counts_test_2 <- counts[,c(1:10,990:1000)];
+baggedTopic_clus_2 <- classtpx::class_topics(counts_test_2,                                                                   K=2,
+                                                 known_indices=known_indices,                                                  omega_known = omega_known,                                                    tol=0.1);
+barplot(t(baggedTopic_clus_2$omega),
+        col = 2:(K+1),
+        axisnames = F, space = 0, border = NA, 
+        main=paste("No. of clusters=", K),
+        las=1, ylim=c(0,1), cex.axis=1.5, cex.main=1.4)
+
+```
+

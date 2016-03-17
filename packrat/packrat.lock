@@ -1,6 +1,6 @@
 PackratFormat: 1.4
 PackratVersion: 0.4.6.9
-RVersion: 3.2.2
+RVersion: 3.2.4
 Repos: BioCsoft=https://bioconductor.org/packages/3.2/bioc,
     BioCann=https://bioconductor.org/packages/3.2/data/annotation,
     BioCexp=https://bioconductor.org/packages/3.2/data/experiment,
@@ -121,6 +121,11 @@ Source: CRAN
 Version: 0.8
 Hash: aac00bd789bac10970b50e3b7e0cab04
 Requires: stringr
+
+Package: evd
+Source: CRAN
+Version: 2.3-2
+Hash: c6e331f21cc8629a516f0a0ca1f0e59f
 
 Package: foreach
 Source: CRAN
@@ -313,6 +318,12 @@ Source: CRAN
 Version: 0.11.0
 Hash: e10882241e569f584fb1f8c19599a13f
 Requires: crayon, digest, praise
+
+Package: truncdist
+Source: CRAN
+Version: 1.0-1
+Hash: 96632fcd6e64aebe2b9f916170787943
+Requires: evd
 
 Package: truncnorm
 Source: CRAN

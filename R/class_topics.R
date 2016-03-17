@@ -1,13 +1,26 @@
 ##### Estimation for Topic Models ######
 
 ## intended main function; provides defaults and selects K via marginal lhd
-class_topics <- function(counts, K, known_indices=NULL, omega_known=NULL, shape=NULL, initopics=NULL, tol=0.1, 
-                   bf=FALSE, kill=2, ord=TRUE, verb=1, ...)
+class_topics <- function(counts, 
+                         K, 
+                         known_samples=NULL, 
+                         omega_known=NULL, 
+                         theta_known=NULL,
+                         shape=NULL, 
+                         initopics=NULL, 
+                         tol=0.1, 
+                         bf=FALSE, 
+                         kill=2, 
+                         ord=TRUE, verb=1, ...)
   ## class.tpxselect defaults: tmax=10000, wtol=10^(-4), qn=100, grp=NULL, admix=TRUE, nonzero=FALSE, dcut=-10
 {
-  if(is.null(known_indices) & !is.null(omega_known)) stop("no indices specified by user but omega is not empty")
-  if(!is.null(known_indices) & is.null(omega_known)) stop("some indices specified by user as known but omega known is empty")
-  if(length(known_indices) != dim(omega_known)[1]) stop("size of indices known and the omega known provided have a disparity")
+  if(!is.null(omega_known) & !is.null(theta_known)) stop("cannot fix both omega (membership) and theta (cluster distr.) matrices")
+  if(is.null(known_samples) & !is.null(omega_known)) stop("no samples have been specified by user to have known memberships: omega_known must be NULL in such cases")
+  if(!is.null(known_samples) & is.null(omega_known)) stop("some samples specified by user to have known memberships but membership proportion/omega matrix for these samples not specified")
+  
+  if(!is.null(omega_known)){
+  if(length(known_samples) != dim(omega_known)[1]) stop("size of indices known and the omega known provided have a disparity")
+  }
   
   X <- CheckCounts(counts)
   p <- ncol(X) 
@@ -22,11 +35,16 @@ class_topics <- function(counts, K, known_indices=NULL, omega_known=NULL, shape=
   K <- sort(K)
  
   ## initialize
-  unknown_indices <- setdiff(1:nrow(X), known_indices);
-  initopics <- class.tpxinit(X[unknown_indices[1:min(ceiling(length(unknown_indices)*.05),100)],], known_indices = NULL, omega_known=NULL, initopics, K[1], shape, verb)
+  if(!is.null(omega_known)){
+  unknown_samples <- setdiff(1:nrow(X), known_samples);
+  initopics <- class.tpxinit(X[unknown_samples[1:min(ceiling(length(unknown_samples)*.05),100)],], known_samples = NULL, omega_known=NULL, initopics, K[1], shape, verb)
+  }
   
+  if(!is.null(theta_known)){
+    initopics <- theta_known
+  }
   ## either search for marginal MAP K and return bayes factors, or just fit
-  class.tpx <- class.tpxSelect(X, K, known_indices, omega_known, bf, initopics, alpha=shape, tol, kill, verb)
+  class.tpx <- class.tpxSelect(X, K, known_samples, omega_known, bf, initopics, alpha=shape, tol, kill, verb)
   K <- class.tpx$K
   
   ## clean up and out
