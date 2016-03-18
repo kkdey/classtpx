@@ -4,8 +4,9 @@
 class_topics <- function(counts, 
                          K, 
                          known_samples=NULL, 
-                         omega_known=NULL, 
-                         theta_known=NULL,
+                         class_labs=NULL, 
+                         method=c("omega.fix", "theta.fix", "no.fix"),
+                         shrink=TRUE,
                          shape=NULL, 
                          initopics=NULL, 
                          tol=0.1, 
@@ -14,16 +15,24 @@ class_topics <- function(counts,
                          ord=TRUE, verb=1, ...)
   ## class.tpxselect defaults: tmax=10000, wtol=10^(-4), qn=100, grp=NULL, admix=TRUE, nonzero=FALSE, dcut=-10
 {
-  if(!is.null(omega_known) & !is.null(theta_known)) stop("cannot fix both omega (membership) and theta (cluster distr.) matrices")
-  if(is.null(known_samples) & !is.null(omega_known)) stop("no samples have been specified by user to have known memberships: omega_known must be NULL in such cases")
-  if(!is.null(known_samples) & is.null(omega_known)) stop("some samples specified by user to have known memberships but membership proportion/omega matrix for these samples not specified")
+  if(is.null(known_samples) & !is.null(class_labs)) stop("no sample indices with known memberships have been specified: known_samples is NULL")
+  if(!is.null(known_samples) & is.null(class_labs)) stop("samples indices with known memberships specified but class labels not provided")
   
-  if(!is.null(omega_known)){
-  if(length(known_samples) != dim(omega_known)[1]) stop("size of indices known and the omega known provided have a disparity")
+  
+  if(!is.null(known_samples)){
+  if(length(known_samples) != length(class_labs)) stop("number of sample indices with known memberships do not match the the length of class label vector")
   }
   
+  if(method="omega.fix"){
+    omega_known <- model.matrix(lm(1:length(class_labs) ~ as.factor(class_labs)-1))
+  }
+  if(method="theta.fix"){
+    theta_known <- thetaSelect(counts, known_samples, class_labs, shrink=shrink);
+  }
+ 
   X <- CheckCounts(counts)
   p <- ncol(X) 
+  n <- nrow(X)
   if(verb>0)
     cat(sprintf("\nEstimating on a %d document collection.\n", nrow(X)))
 
@@ -31,23 +40,37 @@ class_topics <- function(counts,
   if(prod(shape>0) != 1){ stop("use shape > 0\n") }
                 
   ## check the list of candidate K values
-  if(prod(K>1)!=1){ stop(cat("use K values > 1\n")) }
-  K <- sort(K)
- 
+  if(method!=no.fix){
+    K_classes <- length(unique(class_labs));
+  }else{
+    K_classes <- 0
+  }
   ## initialize
-  if(!is.null(omega_known)){
+  if(method="omega.fix"){
   unknown_samples <- setdiff(1:nrow(X), known_samples);
-  initopics <- class.tpxinit(X[unknown_samples[1:min(ceiling(length(unknown_samples)*.05),100)],], known_samples = NULL, omega_known=NULL, initopics, K[1], shape, verb)
+  initopics <- class.tpxinit(X[unknown_samples[1:min(ceiling(length(unknown_samples)*.05),100)],], 
+                             known_samples = NULL, omega_known=NULL, initopics, K, shape, verb)
   }
   
-  if(!is.null(theta_known)){
-    initopics <- theta_known
+  if(method="theta.fix"){
+    if(K_classes < K[1]){
+    initopics1 <- theta_known
+    initopics2 <- tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], initopics, K- K_classes, shape, verb)
+    initopics <- cbind(initopics1, initopics2)
+    }else{
+      initopics <- theta_known;
+    }
   }
+  
+  if(method="no.fix"){
+    initopics <- tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], initopics, K, shape, verb)
+  }
+  
   ## either search for marginal MAP K and return bayes factors, or just fit
-  class.tpx <- class.tpxSelect(X, K, known_samples, omega_known, theta_known, 
-                               bf, initopics, alpha=shape, tol, kill, verb)
-  K <- class.tpx$K
-  
+  class.tpx <- class.tpxfit(X, K, known_samples, omega_known, initopics, 
+                               alpha=shape, method=method, 
+                               tol, kill, verb)
+ 
   ## clean up and out
   if(ord){ worder <- order(col_sums(class.tpx$omega), decreasing=TRUE) } # order by decreasing usage
   else{ worder <- 1:K }
@@ -57,7 +80,7 @@ class_topics <- function(counts,
   if(nrow(omega)==nrow(X)){ dimnames(omega)[[1]] <- dimnames(X)[[1]] }
   
   ## topic object
-  out <- list(K=K, theta=theta, omega=omega, BF=class.tpx$BF, D=class.tpx$D, X=X)
+  out <- list(K=K, theta=theta, omega=omega, L=class.tpx$L, X=X)
   class(out) <- "topics"
   invisible(out) }
 
