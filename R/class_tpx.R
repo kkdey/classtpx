@@ -15,7 +15,9 @@ CheckCounts <- function(counts){
 }
  
 ## Topic estimation and selection for a list of K values
-class.tpxSelect <- function(X, K, known_indices, omega_known, bf, initheta, alpha, tol, kill, verb,
+class.tpxSelect <- function(X, K, 
+                            known_indices, omega_known, theta_known,
+                            bf, initheta, alpha, tol, kill, verb,
                       admix=TRUE, grp=NULL, tmax=10000,
                       wtol=10^{-4}, qn=100, nonzero=FALSE, dcut=-10){
 
@@ -28,8 +30,9 @@ class.tpxSelect <- function(X, K, known_indices, omega_known, bf, initheta, alph
   ## return fit for single K
   if(length(K)==1 && bf==FALSE){
     if(verb){ cat(paste("Fitting the",K,"topic model.\n")) }
-    fit <-  class.tpxfit(X=X, known_indices=known_indices, omega_known=omega_known, theta=initheta, alpha=alpha, tol=tol, verb=verb,
-                   admix=admix, grp=grp, tmax=tmax, wtol=wtol, qn=qn)
+    fit <-  class.tpxfit(X=X, known_indices=known_indices, omega_known=omega_known, 
+                         theta_known=theta_known, theta=initheta, alpha=alpha, tol=tol, 
+                         verb=verb, admix=admix, grp=grp, tmax=tmax, wtol=wtol, qn=qn)
     fit$D <- class.tpxResids(X=X, theta=fit$theta, omega=fit$omega, grp=grp, nonzero=nonzero)$D
     return(fit)
   }
@@ -61,8 +64,9 @@ class.tpxSelect <- function(X, K, known_indices, omega_known, bf, initheta, alph
   for(i in 1:nK){
     
     ## Solve for map omega in NEF space
-    fit <- class.tpxfit(X=X, known_indices=known_indices, omega_known=omega_known, theta=initheta, alpha=alpha, tol=tol, verb=verb,
-                  admix=admix, grp=grp, tmax=tmax, wtol=wtol, qn=qn)
+    fit <- class.tpxfit(X=X, known_indices=known_indices, omega_known=omega_known, 
+                        theta_known=theta_known,theta=initheta, alpha=alpha, tol=tol, verb=verb,
+                        admix=admix, grp=grp, tmax=tmax, wtol=wtol, qn=qn)
     
     BF <- c(BF, class.tpxML(X=X, theta=fit$theta, omega=fit$omega, alpha=fit$alpha, L=fit$L, dcut=dcut, admix=admix, grp=grp) - null)
     R <- class.tpxResids(X=X, theta=fit$theta, omega=fit$omega, grp=grp, nonzero=nonzero)
@@ -145,8 +149,8 @@ class.tpxinit <- function(X, known_indices, omega_known, initheta, K1, alpha, ve
                
 ## ** main workhorse function.  Only Called by the above wrappers.
 ## topic estimation for a given number of topics (taken as ncol(theta))
-class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
-                   admix, grp, tmax, wtol, qn)
+class.tpxfit <- function(X, known_indices, omega_known, theta_known,
+                         theta, alpha, tol, verb, admix, grp, tmax, wtol, qn)
 {
   ## inputs and dimensions
   if(!inherits(X,"simple_triplet_matrix")){ stop("X needs to be a simple_triplet_matrix") }
@@ -213,7 +217,7 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
     move <- list(theta=theta, omega=Wfit)
     
     ## joint parameter EM update
-    if(!is.null(theta_knowm)){
+    if(!is.null(theta_known)){
     move <- class.tpxEM(X=X, m=m, theta=theta, omega=Wfit, alpha=alpha, admix=admix, grp=grp)
     }
     
@@ -239,7 +243,7 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
     
     if(QNup$L < L){  # happens on bad Wfit, so fully reverse
       if(verb > 10){ cat("_reversing a step_") }
-      if(!is.null(theta_knowm)){
+      if(!is.null(theta_known)){
         move <- class.tpxEM(X=X, m=m, theta=theta, omega=omega, alpha=alpha, admix=admix, grp=grp)
       }
       QNup$L <-  class.tpxlpost(X=X, theta=move$theta, omega=move$omega, alpha=alpha, admix=admix, grp=grp) }
@@ -257,7 +261,7 @@ class.tpxfit <- function(X, known_indices, omega_known, theta, alpha, tol, verb,
 
     ## print
     if(verb>0 && (iter-1)%%ceiling(10/verb)==0 && iter>0){
-      cat( paste( round(dif,digits), #" (", sum(abs(theta-move$theta)),")",
+      cat( paste( round(abs(dif),digits), #" (", sum(abs(theta-move$theta)),")",
                  ", ", sep="") ) }
     
     ## heartbeat for long jobs

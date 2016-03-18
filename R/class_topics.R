@@ -44,7 +44,8 @@ class_topics <- function(counts,
     initopics <- theta_known
   }
   ## either search for marginal MAP K and return bayes factors, or just fit
-  class.tpx <- class.tpxSelect(X, K, known_samples, omega_known, bf, initopics, alpha=shape, tol, kill, verb)
+  class.tpx <- class.tpxSelect(X, K, known_samples, omega_known, theta_known, 
+                               bf, initopics, alpha=shape, tol, kill, verb)
   K <- class.tpx$K
   
   ## clean up and out

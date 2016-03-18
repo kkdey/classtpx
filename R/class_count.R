@@ -2,18 +2,18 @@
 
 ## converting count to frequency matrix
 normalize <- function(x, byrow=TRUE){
-    if(byrow){ s <- row_sums(x)
+    if(byrow){ s <- slam::row_sums(x)
                s[s==0] <- 1
                return( x/s ) }
     else{
-      s <- col_sums(x)
+      s <- slam::col_sums(x)
       s[s==0] <- 1
       return(t(t(x)/s)) }
 }
 
 ## converting a count/freq matrix to tfidf
 stm_tfidf <- function(x){
-  idf <- log( nrow(x) ) - log(col_sums(x>0) + 1) 
+  idf <- log( nrow(x) ) - log(slam::col_sums(x>0) + 1) 
   t( t(x) * idf )
 }
     
