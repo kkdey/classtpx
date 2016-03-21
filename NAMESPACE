@@ -8,7 +8,8 @@ export(stm_tfidf,
        predict.class_topics,
        class_topicVar,
        expit,
-       logit
+       logit,
+       thetaSelect
        )
 
 S3method(plot,class_topics)

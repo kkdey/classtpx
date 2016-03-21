@@ -16,7 +16,7 @@ CheckCounts <- function(counts){
  
 ## Topic estimation and selection for a list of K values
 class.tpxSelect <- function(X, K, 
-                            known_indices, omega_known, theta_known,
+                            known_samples, omega_known, theta_known,
                             initheta, alpha, tol, kill, verb,
                       admix=TRUE, grp=NULL, tmax=10000,
                       wtol=10^{-4}, qn=100, nonzero=FALSE, dcut=-10){
@@ -30,7 +30,7 @@ class.tpxSelect <- function(X, K,
   ## return fit for single K
   if(length(K)==1 && bf==FALSE){
     if(verb){ cat(paste("Fitting the",K,"topic model.\n")) }
-    fit <-  class.tpxfit(X=X, known_indices=known_indices, omega_known=omega_known, 
+    fit <-  class.tpxfit(X=X, known_samples=known_samples, omega_known=omega_known, 
                          theta_known=theta_known, theta=initheta, alpha=alpha, tol=tol, 
                          verb=verb, admix=admix, grp=grp, tmax=tmax, wtol=wtol, qn=qn)
     fit$D <- class.tpxResids(X=X, theta=fit$theta, omega=fit$omega, grp=grp, nonzero=nonzero)$D
@@ -64,7 +64,7 @@ class.tpxSelect <- function(X, K,
   for(i in 1:nK){
     
     ## Solve for map omega in NEF space
-    fit <- class.tpxfit(X=X, known_indices=known_indices, omega_known=omega_known, 
+    fit <- class.tpxfit(X=X, known_samples=known_samples, omega_known=omega_known, 
                         theta_known=theta_known,theta=initheta, alpha=alpha, tol=tol, verb=verb,
                         admix=admix, grp=grp, tmax=tmax, wtol=wtol, qn=qn)
     
@@ -98,7 +98,14 @@ class.tpxSelect <- function(X, K,
               BF=BF, D=D, K=K[which.max(BF)])) }
 
 ## theta initialization
-class.tpxinit <- function(X, known_indices, omega_known, initheta, K1, alpha, verb){
+class.tpxinit <- function(X, 
+                          K1,
+                          known_samples,
+                          omega_known, 
+                          initheta, 
+                          K_classes, 
+                          method=c("omega.fix", "theta.fix", "no.fix"),
+                          alpha, verb){
 ## initheta can be matrix, or c(nK, tmax, tol, verb)
   
   if(is.matrix(initheta)){
@@ -135,9 +142,10 @@ class.tpxinit <- function(X, known_indices, omega_known, initheta, K1, alpha, ve
   for(i in 1:nK){
 
     ## Solve for map omega in NEF space
-    fit <- class.tpxfit(X=X, known_indices=known_indices, omega_known=omega_known,
-                        theta=initheta, alpha=alpha, tol=tol, verb=verb,
-                        admix=TRUE, grp=NULL, tmax=tmax, wtol=-1, qn=-1)
+    fit <- class.tpxfit(X=X, known_samples=known_samples,
+                        omega_known=omega_known, theta=initheta, K_classes=K_classes,
+                        alpha=alpha, method=method, tol=tol, verb=verb, admix=TRUE, 
+                        grp=NULL, tmax=tmax, wtol=-1, qn=-1)
     if(verb>1){ cat(paste(Kseq[i],",", sep="")) }
 
     if(i<nK){ initheta <- class.tpxThetaStart(X, fit$theta, fit$omega, Kseq[i+1]) }
@@ -149,7 +157,7 @@ class.tpxinit <- function(X, known_indices, omega_known, initheta, K1, alpha, ve
                
 ## ** main workhorse function.  Only Called by the above wrappers.
 ## topic estimation for a given number of topics (taken as ncol(theta))
-class.tpxfit <- function(X, known_indices, K_classes, omega_known, theta, 
+class.tpxfit <- function(X, known_samples, omega_known, theta, K_classes,
                          alpha, method=c("omega.fix", "theta.fix", "no.fix"),
                          tol, verb, admix, grp, tmax, wtol, qn)
 {
@@ -170,8 +178,8 @@ class.tpxfit <- function(X, known_indices, K_classes, omega_known, theta,
   omega <- matrix(0, n, K);
   
   ## Initialize
-  if(method="omega.fix") {
-    X_unknown <- X[-(known_indices),];
+  if(method=="omega.fix") {
+    X_unknown <- X[-(known_samples),];
     n_unknown <- nrow(X_unknown);
     xvo_unknown <- X_unknown$v[order(X_unknown$i)]
     wrd_unknown <- X_unknown$j[order(X_unknown$i)]-1
@@ -179,8 +187,8 @@ class.tpxfit <- function(X, known_indices, K_classes, omega_known, theta,
     
     omega_unknown <- class.tpxweights(n=n_unknown, p=p, xvo=xvo_unknown, wrd=wrd_unknown, doc=doc_unknown, start=class.tpxOmegaStart(X_unknown,theta), theta=theta)
    if(!admix){ omega_unknown <- matrix(apply(omega_unknown,2, function(w) tapply(w,grp,mean)), ncol=K) }
-    omega[known_indices,] <- omega_known;
-    omega[-(known_indices),] <- omega_unknown;
+    omega[known_samples,] <- omega_known;
+    omega[-(known_samples),] <- omega_unknown;
   }else{
     omega <- class.tpxweights(n=n, p=p, xvo=xvo, wrd=wrd, doc=doc, start=class.tpxOmegaStart(X,theta), theta=theta)
     if(!admix){ omega <- matrix(apply(omega,2, function(w) tapply(w,grp,mean)), ncol=K) }
@@ -205,12 +213,12 @@ class.tpxfit <- function(X, known_indices, K_classes, omega_known, theta,
     ## sequential quadratic programming for conditional Y solution
     if(admix && wtol > 0){ 
       Wfit <- matrix(0, n, K);
-      if(method="omega.fix") {
-        X_unknown <- X[-(known_indices),];
+      if(method=="omega.fix") {
+        X_unknown <- X[-(known_samples),];
         Wfit_unknown <- class.tpxweights(n=nrow(X_unknown), p=ncol(X_unknown), xvo=xvo_unknown, wrd=wrd_unknown, doc=doc_unknown,
                                 start=omega_unknown, theta=theta,  verb=0, nef=TRUE, wtol=wtol, tmax=20)
-        Wfit[known_indices,] <- omega_known
-        Wfit[-(known_indices),] <- Wfit_unknown}else{
+        Wfit[known_samples,] <- omega_known
+        Wfit[-(known_samples),] <- Wfit_unknown}else{
           Wfit <- class.tpxweights(n=nrow(X), p=ncol(X), xvo=xvo, wrd=wrd, doc=doc,
                              start=omega, theta=theta,  verb=0, nef=TRUE, 
                              wtol=wtol, tmax=20);
@@ -219,7 +227,7 @@ class.tpxfit <- function(X, known_indices, K_classes, omega_known, theta,
     
     
     ## joint parameter EM update
-    if(method="theta.fix"){
+    if(method=="theta.fix"){
       if(K_classes < K){
         move1 <- class.tpxEM(X=X, m=m, theta=theta[,(K_classes+1):K], omega=Wfit, 
                             alpha=alpha, admix=admix, grp=grp)
@@ -234,16 +242,16 @@ class.tpxfit <- function(X, known_indices, K_classes, omega_known, theta,
     
     
     ## quasinewton-newton acceleration
-    if(method="omega.fix"){
-        move_unknown <- list(omega=move$omega[-(known_indices),], theta=move$theta)
+    if(method=="omega.fix"){
+        move_unknown <- list(omega=move$omega[-(known_samples),], theta=move$theta)
         QNup <- class.tpxQN(move=move_unknown, Y=Y, X=X_unknown, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
         move_unknown <- QNup$move;
         omega_unknown <- move_unknown$omega;
-        move$omega[-(known_indices),] <- omega_unknown;
-        move$omega[known_indices,] <- omega_known;
+        move$omega[-(known_samples),] <- omega_unknown;
+        move$omega[known_samples,] <- omega_known;
         move$theta <- move_unknown$theta;
         QNup$L <-  class.tpxlpost(X=X, theta=move$theta, omega=move$omega, alpha=alpha, admix=admix, grp=grp)
-        } else if (method="theta.fix"){
+        } else if (method=="theta.fix"){
           QNup <- class.tpxQN(move=move, Y=Y, X=X, alpha=alpha, verb=verb, admix=admix, grp=grp, doqn=qn-dif)
           move$omega <- QNup$move$omega;
         } else{
@@ -254,7 +262,7 @@ class.tpxfit <- function(X, known_indices, K_classes, omega_known, theta,
     
     if(QNup$L < L){  # happens on bad Wfit, so fully reverse
       if(verb > 10){ cat("_reversing a step_") }
-      if(method="theta.fix"){
+      if(method=="theta.fix"){
         if(K_classes < K){
           move1 <- class.tpxEM(X=X, m=m, theta=theta[,(K_classes+1):K], omega=omega, 
                                alpha=alpha, admix=admix, grp=grp)

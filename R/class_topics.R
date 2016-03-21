@@ -23,10 +23,10 @@ class_topics <- function(counts,
   if(length(known_samples) != length(class_labs)) stop("number of sample indices with known memberships do not match the the length of class label vector")
   }
   
-  if(method="omega.fix"){
+  if(method=="omega.fix"){
     omega_known <- model.matrix(lm(1:length(class_labs) ~ as.factor(class_labs)-1))
   }
-  if(method="theta.fix"){
+  if(method=="theta.fix"){
     theta_known <- thetaSelect(counts, known_samples, class_labs, shrink=shrink);
   }
  
@@ -40,36 +40,43 @@ class_topics <- function(counts,
   if(prod(shape>0) != 1){ stop("use shape > 0\n") }
                 
   ## check the list of candidate K values
-  if(method!=no.fix){
+  if(method!="no.fix"){
     K_classes <- length(unique(class_labs));
   }else{
     K_classes <- 0
   }
   ## initialize
-  if(method="omega.fix"){
+  if(method=="omega.fix"){
   unknown_samples <- setdiff(1:nrow(X), known_samples);
   initopics <- class.tpxinit(X[unknown_samples[1:min(ceiling(length(unknown_samples)*.05),100)],], 
-                             known_samples = NULL, omega_known=NULL, initopics, K, shape, verb)
+                             K1=K, known_samples = NULL, omega_known=NULL, 
+                             initopics, K_classes=0, method=method, shape, verb)
   }
   
-  if(method="theta.fix"){
-    if(K_classes < K[1]){
+  if(method=="theta.fix"){
+    if(K_classes < K){
     initopics1 <- theta_known
-    initopics2 <- tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], initopics, K- K_classes, shape, verb)
+    initopics2 <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], 
+                                K1=K- K_classes, known_samples=NULL, omega_known=NULL,
+                                initopics, K_classes=K_classes, method=method, shape, verb)
     initopics <- cbind(initopics1, initopics2)
     }else{
       initopics <- theta_known;
     }
   }
   
-  if(method="no.fix"){
-    initopics <- tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], initopics, K, shape, verb)
+  if(method=="no.fix"){
+    initopics <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),],
+                               K1=K, known_samples=NULL, omega_known=NULL,
+                              initopics, K_classes = K_classes, method=method, shape, verb)
   }
   
   ## either search for marginal MAP K and return bayes factors, or just fit
-  class.tpx <- class.tpxfit(X, K, known_samples, omega_known, initopics, 
-                               alpha=shape, method=method, 
-                               tol, kill, verb)
+  class.tpx <- class.tpxfit(X, known_samples, omega_known, initopics, 
+                            K_classes = K_classes, alpha=shape, method=method, 
+                            tol, verb, admix, grp, tmax, wtol, qn)
+  
+  map.tpx <- maptpx::topics(counts, K=K, tol=tol)
  
   ## clean up and out
   if(ord){ worder <- order(col_sums(class.tpx$omega), decreasing=TRUE) } # order by decreasing usage
