@@ -50,7 +50,7 @@ class_topics <- function(counts,
   unknown_samples <- setdiff(1:nrow(X), known_samples);
   initopics <- class.tpxinit(X[unknown_samples[1:min(ceiling(length(unknown_samples)*.05),100)],], 
                              K1=K, known_samples = NULL, omega_known=NULL, 
-                             initopics, K_classes=0, method=method, shape, verb)
+                             initopics, K_classes=0, method="no.fix", shape, verb)
   }
   
   if(method=="theta.fix"){
@@ -58,7 +58,7 @@ class_topics <- function(counts,
     initopics1 <- theta_known
     initopics2 <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], 
                                 K1=K- K_classes, known_samples=NULL, omega_known=NULL,
-                                initopics, K_classes=K_classes, method=method, shape, verb)
+                                initopics, K_classes=K_classes, method="no.fix", shape, verb)
     initopics <- cbind(initopics1, initopics2)
     }else{
       initopics <- theta_known;
@@ -76,7 +76,7 @@ class_topics <- function(counts,
                             K_classes = K_classes, alpha=shape, method=method, 
                             tol, verb, admix, grp, tmax, wtol, qn)
   
-  map.tpx <- maptpx::topics(counts, K=K, tol=tol)
+  #map.tpx <- maptpx::topics(counts, K=K, tol=tol)
  
   ## clean up and out
   if(ord){ worder <- order(col_sums(class.tpx$omega), decreasing=TRUE) } # order by decreasing usage
