@@ -13,6 +13,17 @@ Version: 1.6-10
 Hash: 25dde6b69689f4613a4c3f92c9fafee2
 Requires: matrixcalc, snow
 
+Package: Biobase
+Source: Bioconductor
+Version: 2.30.0
+Hash: f58887338a297fdfd20d2cf1c2584f7d
+Requires: BiocGenerics
+
+Package: BiocGenerics
+Source: Bioconductor
+Version: 0.16.1
+Hash: c66deb506ef217896ce7d2ee347c95ff
+
 Package: BiocInstaller
 Source: Bioconductor
 Version: 1.20.1
@@ -390,6 +401,16 @@ Source: CRAN
 Version: 0.4.0
 Hash: b74e3f81bab2d88325d8798d5e03e0cc
 Requires: RColorBrewer, Rcpp, dichromat, labeling, munsell, plyr
+
+Package: singleCellRNASeqMouseTreutlein
+Source: github
+Version: 0.99.0
+Hash: 1e1a61b2b14def62ec9411b947d611f2
+Requires: Biobase
+GithubRepo: singleCellRNASeqMouseTreutleinLung
+GithubUsername: jhsiao999
+GithubRef: master
+GithubSha1: 1deb95ae6ec1c2f71bdc70d25e520ac465ebe305
 
 Package: slam
 Source: CRAN
