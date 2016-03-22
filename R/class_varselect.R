@@ -42,7 +42,16 @@ thetaSelect <- function(counts, known_samples, class_labs, shrink=TRUE)
       return(FeatureSummary_class[[l]]$beta_element)
     }))
     
-    ash_beta_class <- do.call(cbind, lapply(1:length(unique(class_labs)), function(l) return(suppressWarnings(ashr::ash(beta_class[,l], sebeta_class[,l], mixcompdist="normal")$PosteriorMean))));
+    ash_beta_class <- do.call(cbind, lapply(unique(class_labs), 
+                                            function(l) 
+                                            {
+                                              if(length(which(class_labs==l))==1){
+                                                return(beta_class[,l])
+                                              }else{
+                                              return(suppressWarnings(ashr::ash(beta_class[,l], sebeta_class[,l], 
+                                                                                mixcompdist="normal")$PosteriorMean))
+                                              }
+                                              }))
     ash_mean_class <- ash_beta_class + mean_features;
     ash_theta_class <- maptpx::normalize(ash_mean_class+1e-20, byrow=FALSE)
     return(ash_theta_class)
