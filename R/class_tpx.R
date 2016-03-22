@@ -229,9 +229,9 @@ class.tpxfit <- function(X, known_samples, omega_known, theta, K_classes,
     ## joint parameter EM update
     if(method=="theta.fix"){
       if(K_classes < K){
-        move1 <- class.tpxEM(X=X, m=m, theta=theta[,(K_classes+1):K], omega=Wfit, 
+        move1 <- class.tpxEM(X=X, m=m, theta=theta, omega=Wfit, 
                             alpha=alpha, admix=admix, grp=grp)
-        move <- list(theta=cbind(theta[,1:K_classes],move1$theta), omega=move1$omega)
+        move <- list(theta=cbind(theta[,1:K_classes],move1$theta[,((K_classes+1):K)]), omega=move1$omega)
       }else{
         move <- list(theta=theta, omega=Wfit)
       }
@@ -264,9 +264,9 @@ class.tpxfit <- function(X, known_samples, omega_known, theta, K_classes,
       if(verb > 10){ cat("_reversing a step_") }
       if(method=="theta.fix"){
         if(K_classes < K){
-          move1 <- class.tpxEM(X=X, m=m, theta=theta[,(K_classes+1):K], omega=omega, 
+          move1 <- class.tpxEM(X=X, m=m, theta=theta, omega=omega, 
                                alpha=alpha, admix=admix, grp=grp)
-          move <- list(theta=cbind(theta[,1:K_classes],move1$theta), omega=move1$omega)
+          move <- list(theta=cbind(theta[,1:K_classes],move1$theta[,((K_classes+1):K)]), omega=move1$omega)
         }else{
           move <- list(theta=theta, omega=omega)
         }

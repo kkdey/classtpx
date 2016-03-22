@@ -5,14 +5,17 @@ class_topics <- function(counts,
                          K, 
                          known_samples=NULL, 
                          class_labs=NULL, 
-                         method=c("omega.fix", "theta.fix", "no.fix"),
+                         method=c("omega.fix", "theta.fix", "theta.prior", "no.fix"),
                          shrink=TRUE,
                          shape=NULL, 
                          initopics=NULL, 
                          tol=0.1, 
                          bf=FALSE, 
                          kill=2, 
-                         ord=TRUE, verb=1, ...)
+                         ord=TRUE, verb=1, 
+                         tmax=10000, wtol=10^(-4), 
+                         qn=100, grp=NULL, admix=TRUE, 
+                         nonzero=FALSE, dcut=-10)
   ## class.tpxselect defaults: tmax=10000, wtol=10^(-4), qn=100, grp=NULL, admix=TRUE, nonzero=FALSE, dcut=-10
 {
   if(is.null(known_samples) & !is.null(class_labs)) stop("no sample indices with known memberships have been specified: known_samples is NULL")
@@ -23,10 +26,24 @@ class_topics <- function(counts,
   if(length(known_samples) != length(class_labs)) stop("number of sample indices with known memberships do not match the the length of class label vector")
   }
   
-  if(method=="omega.fix"){
-    omega_known <- model.matrix(lm(1:length(class_labs) ~ as.factor(class_labs)-1))
+  if(method!="no.fix"){
+    K_classes <- length(unique(class_labs));
+  }else{
+    K_classes <- 0
   }
-  if(method=="theta.fix"){
+  
+  if(method=="omega.fix"){
+    if(K_classes < K){
+      omega_known <- cbind(model.matrix(lm(1:length(class_labs) ~ as.factor(class_labs)-1)),
+                         matrix(0,length(class_labs),K-K_classes));
+    }else{
+      omega_known <- model.matrix(lm(1:length(class_labs) ~ as.factor(class_labs)-1));
+    }
+  }else{
+    omega_known=NULL;
+  }
+  
+  if(method=="theta.fix" || method=="theta.prior"){
     theta_known <- thetaSelect(counts, known_samples, class_labs, shrink=shrink);
   }
  
@@ -40,26 +57,22 @@ class_topics <- function(counts,
   if(prod(shape>0) != 1){ stop("use shape > 0\n") }
                 
   ## check the list of candidate K values
-  if(method!="no.fix"){
-    K_classes <- length(unique(class_labs));
-  }else{
-    K_classes <- 0
-  }
+  
   ## initialize
   if(method=="omega.fix"){
   unknown_samples <- setdiff(1:nrow(X), known_samples);
   initopics <- class.tpxinit(X[unknown_samples[1:min(ceiling(length(unknown_samples)*.05),100)],], 
                              K1=K, known_samples = NULL, omega_known=NULL, 
-                             initopics, K_classes=0, method="no.fix", shape, verb)
+                             initopics, K_classes=K_classes, method="no.fix", shape, verb)
   }
   
-  if(method=="theta.fix"){
+  if(method=="theta.fix" || method=="theta.prior"){
     if(K_classes < K){
     initopics1 <- theta_known
     initopics2 <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], 
                                 K1=K- K_classes, known_samples=NULL, omega_known=NULL,
-                                initopics, K_classes=K_classes, method="no.fix", shape, verb)
-    initopics <- cbind(initopics1, initopics2)
+                                initopics, K_classes=2, method="no.fix", shape, verb)
+    initopics <- cbind(initopics1, initopics2[,order(apply(initopics2,2, var), decreasing=FALSE)[1:(K-K_classes)]])
     }else{
       initopics <- theta_known;
     }
