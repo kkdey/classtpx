@@ -1,0 +1,675 @@
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Semi supervised Grade of Memebership models for RNA-seq data using classtpx}
+%\VignettePackage{classtpx}
+
+% To compile this document
+% library('knitr'); rm(list=ls()); knit('classtpx/vignettes/classtpx-vignette.Rnw')
+% library('knitr'); rm(list=ls()); knit2pdf('classtpx/vignettes/classtpx-vignette.Rnw'); openPDF('classtpx-vignette.pdf')
+%
+
+\documentclass[12pt]{article}
+
+\newcommand{\classtpx}{\textit{classtpx}}
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+\usepackage{dsfont}
+\usepackage{cite}
+\usepackage{amsmath} 
+
+
+
+
+
+\RequirePackage{/Library/Frameworks/R.framework/Versions/3.2/Resources/library/BiocStyle/resources/tex/Bioconductor}
+
+\AtBeginDocument{\bibliographystyle{/Library/Frameworks/R.framework/Versions/3.2/Resources/library/BiocStyle/resources/tex/unsrturl}}
+
+
+\author{Kushal K Dey, Chiaowen Joyce Hsiao \& Matthew Stephens \\[1em] \small{\textit{Stephens Lab}, The University of Chicago} \mbox{ }\\ \small{\texttt{$^*$Correspondending Email: mstephens@uchicago.edu}}}
+
+\bioctitle[Semi supervised Grade of Membership models for RNA-seq data using \classtpx{}]{Semi supervised Grade of Membership models for RNA-seq data using \classtpx{}}
+
+\begin{document}
+
+\maketitle
+
+
+
+\newpage
+
+\tableofcontents
+
+\section{Introduction}
+
+The Grade of Membership (GoM) model, as fitted by the \begin{verb} topics() \end{verb} function of the package \CRANpkg{maptpx} or the \begin{verb} FitGoM() \end{verb} in the package CountClust, suffers from the issue of identifiability, the reason being clusters that are determined in a completely unsupervised way. Oftentimes, we may have information about expression patterns of the biological clusters of interest. To cite an example, suppose we have RNA-seq data on blood samples (bulk or single cell) and also RNA-seq data on some FACS sorted single cells from Blood identifying different Blood cell types. Sequencing these FACS sorted cells gives us information of the expression patterns of the underlying cell types. One can view these cell types as potential clusters in clustering of RNA-seq data (non FACS sorted) from Blood. It is this prior information about the clusters that can ultimately lead to more distinct patterns of expression compared to unsupervised models and give a better sense about the mixing proportions of different cell types of interest in the samples.
+
+\section{Data Preparation}
+
+Recently a number of studies have been published on FACS sorted RNA-sequqnicng data with the aim of identifying distinct cell types of cell cycle phases. We are trying to build a library of data packages that seem relevant to our research interest and have them available as ExpressionSet objects (integrating the expression data succinctly with metadata information on samples and features). You can find a number of these data packages hosted on our Github pages \url{https://github.com/kkdey?tab=repositories} and \url{https://github.com/jhsiao999?tab=repositories}.
+
+We present an example of the Leng et al 2015 data [paper site: \url{http://www.nature.com/nmeth/journal/v12/n10/full/nmeth.3549.html}] of RNA-sequencing data on human embryonic stem cells. Total 213 H1 single cells and 247 H1-Fucci single cells were sequenced. The 213 H1 cells were used to evaluate Oscope in identifying oscillatory genes. The H1-Fucci cells were used to confirm the cell cycle gene cluster identified by Oscope in the H1 hESCs. In the dataset, we had cells labeled H1 (213), G1 (91), S (80) and G2 (76).
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{devtools}\hlopt{::}\hlkwd{install_github}\hlstd{(}\hlstr{"kkdey/singleCellRNASeqHumanLengESC"}\hlstd{,} \hlkwc{force}\hlstd{=}\hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(singleCellRNASeqHumanLengESC)}
+\hlkwd{data}\hlstd{(}\hlstr{"HumanLengESC"}\hlstd{)}
+\hlstd{leng_gene_names} \hlkwb{<-} \hlstd{Biobase}\hlopt{::}\hlkwd{featureNames}\hlstd{(HumanLengESC);}
+
+\hlstd{leng_data} \hlkwb{<-} \hlkwd{t}\hlstd{(Biobase}\hlopt{::}\hlkwd{exprs}\hlstd{(HumanLengESC));}
+\hlstd{leng_metadata} \hlkwb{<-} \hlstd{Biobase}\hlopt{::}\hlkwd{pData}\hlstd{(HumanLengESC)}
+\hlstd{leng_cell_state} \hlkwb{<-} \hlstd{leng_metadata}\hlopt{$}\hlstd{cell_state;}
+
+\hlkwd{table}\hlstd{(leng_cell_state)}
+\end{alltt}
+\begin{verbatim}
+## leng_cell_state
+##  G1  G2  H1   S 
+##  91  76 213  80
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\section{Methods and Materials}
+
+The general framework for Grade of Membership (GoM) models is as follows.
+
+suppose $c_{ng}$ represents the read counts for sample $n$ and gene $g$. Then we assume the model
+
+\begin{equation}
+\left (c_{n1}, c_{n2}, \cdots, c_{nG} \right) \sim Mult \left (c_{n+}, p_{n1}, p_{n2}, \cdots, p_{nG} \right)
+\end{equation}
+
+where $p_{ng}$ represents the probability of observing a read mapping to gene $g$ from sample $n$. We write this probability as 
+
+\begin{equation}
+p_{ng} = \sum_{k=1}^{K} \omega_{nk} \theta_{kg} \hspace{1 cm} \sum_{k=1}^{K} \omega_{nk}=1 \hspace{0.5 cm} \forall n \hspace{1 cm} \sum_{g=1}^{G} \theta_{kg}=1 \hspace{0.5 cm} \forall k 
+\end{equation}
+
+where $\omega_{nk}$ represents membership probability of $k$ th cluster in the $n$ th sample and $\theta_{kg}$ represents cluster mass at gene $g$ for cluster $k$.
+
+In standard GoM models, the priors on $\omega$ and $\theta$ are non-informative.
+
+\begin{equation}
+\left(\omega_{n1}, \omega_{n2}, \cdots, \omega_{nK} \right) \sim Dir \left ( \frac{1}{K}, \frac{1}{K}, \cdots, \frac{1}{K} \right)
+\end{equation}
+
+\begin{equation}
+\left(\theta_{k1}, \theta_{k2}, \cdots, \theta_{kG} \right) \sim Dir \left ( \frac{1}{KG}, \frac{1}{KG}, \cdots, \frac{1}{KG} \right)
+\end{equation}
+
+Now in \classtpx{}, we assume that for some samples, the class labels or cluster labels are known. 
+This information is used to either drive the $\theta$ matrix or the $\omega$ matrix. For instance, in the Leng et al 2015 data, the three classes may be considered to be the G1, S and G2 phases. There are three methods we propose 
+
+\begin{itemize}
+
+\item \textbf{omega.fix}: We fix the $\omega$ vector for the samples for which the class labels are known. For instance, in the Leng et al 2015 data, for a classtpx model with K=3 representing the clusters due to G1, S and G2 phases, if the sample $n$ comes from the G1 phase, we fix $\omega_{n.} = (1,0,0)$. Similarly, if the sample comes from S or G2 phase, we fix $\omega_{n.}$ to be $(0,1,0)$ and $(0,0,1)$ respectively. For the cells corresponding to H1 phase, the $\omega$ vector is not known and estimated from the data. In mathematical terms, we can write the model for $\omega$ as follows 
+
+\begin{align*}
+\left(\omega_{n1}, \omega_{n2}, \cdots, \omega_{nK} \right) & = e_{k} \hspace{1 cm} if \hspace{0.5 cm} class(n) = k  \\
+\left(\omega_{n1}, \omega_{n2}, \cdots, \omega_{nK} \right) & \sim Dir \left ( \frac{1}{K}, \frac{1}{K}, \cdots, \frac{1}{K} \right) \hspace{1 cm} if \hspace{0.5 cm} class(n) = NULL \\
+\end{align*}
+
+where $class(n)$ represents the class label of the sample (it is NULL if the class label is not known). $e_{k}$ is the vector with $1$ at position $k$ and $0$ at all other positions of the vector. We then perform updates on the $\omega$ on the NULL class label samples and the $\theta$ matrix and the updating scheme is similar to the \begin{verb} topics() \end{verb} as in \CRANpkg{maptpx} package due to Matt Taddy.
+
+\item \textbf{theta.prior}: For each class label $k$, we pool all samples $n$ with $class(n)=k$, and then normalize the counts data to determine the prior $\theta$ matrix.
+
+\begin{align*}
+\theta_{kg} & = \frac{\sum_{n:class(n)=k} c_{ng}}{\sum_{g} \sum_{n:class(n)=k} c_{ng}} \hspace{0.5 cm} \forall g,  \hspace{0.5 cm} if \hspace{0.5 cm} card \{n: class(n)=k \} \neq 0 \nonumber \\
+\left(\theta_{k1}, \theta_{k2}, \cdots, \theta_{kG} \right) & \sim Dir \left ( \frac{1}{KG}, \frac{1}{KG}, \cdots, \frac{1}{KG} \right) \hspace{0.5 cm} if \hspace{0.5 cm} card \{n: class(n)=k \}= 0  \numberthis \label{eq:eq1} \\
+\end{align*}
+
+One can also apply adaptive shrinkage on the $\theta_{k.}$ values. In that case, define
+
+\begin{equation}
+\beta_{kg} = \frac{\sum_{n:class(n)=k} c_{ng}}{N_{k}} - \frac{\sum_{g} \sum_{n:class(n)=k} c_{ng}}{N} \hspace{0.5 cm}  card \{n: class(n)=k \}=N_{k}
+\end{equation}
+
+We assume
+
+\begin{equation}
+s_{kg} = \frac{1}{N_{k} (N_{k}-1)} \sum_{class(n)=k} \left (c_{ng} - \frac{\sum_{n:class(n)=k} c_{ng}}{N_{k}} \right )^{2} \hspace{0.5 cm} card \{n: class(n)=k \}=N_{k}
+\end{equation}
+
+Then we perform \begin{verb} ash \end{verb} on the vector $(\beta_{kg}, s_{kg})$ over all genes $g$ for each $k$ and then obtain the posterior mean of $\beta$, say $\beta_{post}(kg)$.
+
+We then fix the $\theta$ values as 
+
+\begin{equation}
+\theta^{\star}_{kg} = \frac{\sum_{g} \sum_{n:class(n)=k} c_{ng}}{N} + \beta_{post}(kg)
+\end{equation}
+
+So, in other words we assume
+
+\begin{align*}
+\theta_{kg} & = \theta^{\star}_{kg} \hspace{0.5 cm} \forall g,  \hspace{0.5 cm} if \hspace{0.5 cm} card \{n: class(n)=k \} \neq 0 \nonumber \\
+\left(\theta_{k1}, \theta_{k2}, \cdots, \theta_{kG} \right) & \sim Dir \left ( \frac{1}{KG}, \frac{1}{KG}, \cdots, \frac{1}{KG} \right) \hspace{0.5 cm} if \hspace{0.5 cm} card \{n: class(n)=k \}= 0 \numberthis \label{eq:eq2} \\
+\end{align*}
+
+These $\theta_{k.}$ as in Eqn \eqref{eq:eq1} or Eqn \eqref{eq:eq2} (depending on whether we use shrinkage or not) are then input into the GoM model framework as prior cluster probability vectors and we update them based on the data to find the posterior estimates at each stage of iteration (the updating scheme similar to the \begin{verb} topics() \end{verb} as in \CRANpkg{maptpx} package due to Matt Taddy).
+
+\item \textbf{theta.fix}: In this method, instead of setting $\theta_{k.}$ matrix for $k$ with $N_{k} \neq 0$ as prior, we fix them at these values and do not update them during the iterative steps. The only updates correspond to those $k$ for which $N_{k} = 0$, and the updating scheme is similar to the \begin{verb} topics() \end{verb} as in \CRANpkg{maptpx} package due to Matt Taddy.
+\end{itemize}
+
+\section{Results}
+
+We first cite the example of the Leng et al data and fit \begin{verb} classtpx() \end{verb} model on the data. 
+
+\subsection{Leng et al (2015)}
+
+We fix the class labels and the sample indices as follows.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{index_1} \hlkwb{<-} \hlkwd{which}\hlstd{(leng_cell_state}\hlopt{==}\hlstr{"G1"}\hlstd{);}
+\hlstd{index_2} \hlkwb{<-} \hlkwd{which}\hlstd{(leng_cell_state}\hlopt{==}\hlstr{"S"}\hlstd{);}
+\hlstd{index_3} \hlkwb{<-} \hlkwd{which}\hlstd{(leng_cell_state}\hlopt{==}\hlstr{"G2"}\hlstd{);}
+
+\hlstd{known_samples} \hlkwb{<-} \hlkwd{c}\hlstd{(index_1, index_2, index_3);}
+\hlstd{class_labs} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{rep}\hlstd{(}\hlstr{"G1"}\hlstd{,} \hlkwd{length}\hlstd{(index_1)),}
+                \hlkwd{rep}\hlstd{(}\hlstr{"S"}\hlstd{,} \hlkwd{length}\hlstd{(index_2)),}
+                \hlkwd{rep}\hlstd{(}\hlstr{"G2"}\hlstd{,} \hlkwd{length}\hlstd{(index_3)));}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+Then we can perform \begin{verb} classtpx() \end{verb} model for \begin{verb} omega.fix() \end{verb} method as follows 
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{classtpx}\hlopt{::}\hlkwd{class_topics}\hlstd{(}
+    \hlstd{leng_data,}
+    \hlkwc{K}\hlstd{=}\hlnum{3}\hlstd{,}
+    \hlkwc{known_samples} \hlstd{= known_samples,}
+    \hlkwc{class_labs} \hlstd{= class_labs,}
+    \hlkwc{method}\hlstd{=}\hlstr{"omega.fix"}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../data/leng_topic_fit_3_classtpx_omega_fix.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+We can perform Structure plot visualization of the results.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlkwc{file}\hlstd{=}\hlstr{"../data/leng_topic_fit_3_classtpx_omega_fix.rda"}\hlstd{))}
+
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega;}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(leng_cell_state,}
+                        \hlkwc{levels} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"G1"}\hlstd{,} \hlstr{"S"}\hlstd{,} \hlstr{"G2"}\hlstd{,} \hlstr{"H1"}\hlstd{) ) )}
+
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
+
+
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_leng_1-1} 
+
+\end{knitrout}
+
+We now perform  \begin{verb} classtpx() \end{verb} model for \begin{verb} theta.prior() \end{verb} method.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{classtpx}\hlopt{::}\hlkwd{class_topics}\hlstd{(}
+    \hlstd{leng_data,}
+    \hlkwc{K}\hlstd{=}\hlnum{3}\hlstd{,}
+    \hlkwc{known_samples} \hlstd{= known_samples,}
+    \hlkwc{class_labs} \hlstd{= class_labs,}
+    \hlkwc{method}\hlstd{=}\hlstr{"theta.prior"}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{,}
+    \hlkwc{shrink}\hlstd{=}\hlnum{TRUE}\hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../data/leng_topic_fit_3_classtpx_theta_prior.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+We can perform Structure plot visualization of the results.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlkwc{file}\hlstd{=}\hlstr{"../data/leng_topic_fit_3_classtpx_theta_prior.rda"}\hlstd{))}
+
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega;}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(leng_cell_state,}
+                        \hlkwc{levels} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"G1"}\hlstd{,} \hlstr{"S"}\hlstd{,} \hlstr{"G2"}\hlstd{,} \hlstr{"H1"}\hlstd{) ) )}
+
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
+
+
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_leng_2-1} 
+
+\end{knitrout}
+
+Finally we apply the \begin{verb} theta.fix() \end{verb} method.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{classtpx}\hlopt{::}\hlkwd{class_topics}\hlstd{(}
+    \hlstd{leng_data,}
+    \hlkwc{K}\hlstd{=}\hlnum{3}\hlstd{,}
+    \hlkwc{known_samples} \hlstd{= known_samples,}
+    \hlkwc{class_labs} \hlstd{= class_labs,}
+    \hlkwc{method}\hlstd{=}\hlstr{"theta.fix"}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{,}
+    \hlkwc{shrink}\hlstd{=}\hlnum{FALSE}\hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../data/leng_topic_fit_3_classtpx_theta_fix.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+We can perform Structure plot visualization of the results.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlkwc{file}\hlstd{=}\hlstr{"../data/leng_topic_fit_3_classtpx_theta_fix.rda"}\hlstd{))}
+
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega;}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(leng_cell_state,}
+                        \hlkwc{levels} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"G1"}\hlstd{,} \hlstr{"S"}\hlstd{,} \hlstr{"G2"}\hlstd{,} \hlstr{"H1"}\hlstd{) ) )}
+
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
+
+
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_leng_3-1} 
+
+\end{knitrout}
+
+\subsection{Treutlin et al (2014)}
+
+Treutlin et al 2014 sequenced single cell transcriptome data from mouse lung epithelium. The cells were collected at various stages E14.5, E16.5, E18.5 and some adult replicates. We performed both \begin{verb} maptpx() \end{verb} model and \begin{verb} classtpx \end{verb} model fitting on this data.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{devtools}\hlopt{::}\hlkwd{install_github}\hlstd{(}\hlstr{"jhsiao999/singleCellRNASeqMouseTreutleinLung"}\hlstd{,} \hlkwc{force}\hlstd{=}\hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(singleCellRNASeqMouseTreutleinLung)}
+\hlkwd{data}\hlstd{(}\hlstr{"MouseTreutleinLung"}\hlstd{)}
+\hlstd{leng_gene_names} \hlkwb{<-} \hlstd{Biobase}\hlopt{::}\hlkwd{featureNames}\hlstd{(HumanLengESC);}
+
+\hlstd{counts_data} \hlkwb{<-} \hlkwd{t}\hlstd{(Biobase}\hlopt{::}\hlkwd{exprs}\hlstd{(MouseTreutleinLung));}
+\hlstd{pheno_metadata} \hlkwb{<-} \hlkwd{pData}\hlstd{(MouseTreutleinLung);}
+\hlkwd{table}\hlstd{(pheno_metadata[,}\hlnum{1}\hlstd{])}
+\end{alltt}
+\begin{verbatim}
+## 
+## adult E14.5 E16.5 E18.5 
+##    46    45    27    83
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+We first apply the maptpx model for $K=3$.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{maptpx}\hlopt{::}\hlkwd{topics}\hlstd{(counts_data,} \hlnum{3}\hlstd{,} \hlkwc{tol}\hlstd{=}\hlnum{0.1}\hlstd{);}
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../data/treutlin_topic_fit_3_maptpx.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlkwc{file}\hlstd{=}\hlstr{"../data/treutlin_topic_fit_3_maptpx.rda"}\hlstd{))}
+
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega;}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(}\hlkwd{paste0}\hlstd{(pheno_metadata}\hlopt{$}\hlstd{cell_type,} \hlstr{"_"}\hlstd{,}
+                               \hlstd{pheno_metadata}\hlopt{$}\hlstd{replicate),}
+                        \hlkwc{levels}\hlstd{=}\hlkwd{rev}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"E14.5_1"}\hlstd{,} \hlstr{"E16.5_1"}\hlstd{,}
+                                     \hlstr{"E18.5_1"}\hlstd{,}\hlstr{"E18.5_2"}\hlstd{,}
+                                     \hlstr{"E18.5_3"}\hlstd{,}\hlstr{"adult_replicate"}\hlstd{))}
+\hlstd{))}
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
+
+
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_treutlin_maptpx-1} 
+
+\end{knitrout}
+
+We next performed classtpx model for K=2  with \begin{verb} omega.fix() \end{verb} method.
+We chose E14.5 as one group and adult replicates as another group in defining class labels and
+assumed we do not have class label information for E16.5 and E18.5 phases.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{known_samples} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{which}\hlstd{(pheno_metadata}\hlopt{$}\hlstd{cell_type}\hlopt{==}\hlstr{"E14.5"}\hlstd{),}
+                   \hlkwd{which}\hlstd{(pheno_metadata}\hlopt{$}\hlstd{cell_type}\hlopt{==}\hlstr{"adult"}\hlstd{));}
+\hlstd{class_labs} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{rep}\hlstd{(}\hlnum{1}\hlstd{,} \hlkwd{length}\hlstd{(}\hlkwd{which}\hlstd{(pheno_metadata}\hlopt{$}\hlstd{cell_type}\hlopt{==}\hlstr{"E14.5"}\hlstd{))),}
+                \hlkwd{rep}\hlstd{(}\hlnum{2}\hlstd{,}\hlkwd{length}\hlstd{(}\hlkwd{which}\hlstd{(pheno_metadata}\hlopt{$}\hlstd{cell_type}\hlopt{==}\hlstr{"adult"}\hlstd{))));}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{classtpx}\hlopt{::}\hlkwd{class_topics}\hlstd{(}
+    \hlstd{counts_data,}
+    \hlkwc{K}\hlstd{=}\hlnum{2}\hlstd{,}
+    \hlkwc{known_samples} \hlstd{= known_samples,}
+    \hlkwc{class_labs} \hlstd{= class_labs,}
+    \hlkwc{method}\hlstd{=}\hlstr{"omega.fix"}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{,}
+    \hlkwc{shrink}\hlstd{=}\hlnum{FALSE}\hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../rdas/treutlin_topic_fit_2_classtpx_omega_fix.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlkwc{file}\hlstd{=}\hlstr{"../data/treutlin_topic_fit_2_classtpx_omega_fix.rda"}\hlstd{))}
+
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega;}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(}\hlkwd{paste0}\hlstd{(pheno_metadata}\hlopt{$}\hlstd{cell_type,} \hlstr{"_"}\hlstd{,}
+                               \hlstd{pheno_metadata}\hlopt{$}\hlstd{replicate),}
+                        \hlkwc{levels}\hlstd{=}\hlkwd{rev}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"E14.5_1"}\hlstd{,} \hlstr{"E16.5_1"}\hlstd{,}
+                                     \hlstr{"E18.5_1"}\hlstd{,}\hlstr{"E18.5_2"}\hlstd{,}
+                                     \hlstr{"E18.5_3"}\hlstd{,}\hlstr{"adult_replicate"}\hlstd{))}
+\hlstd{))}
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
+
+
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_treutlin_classtpx_omega_fix-1} 
+
+\end{knitrout}
+
+We perform the method with \begin{verb} theta.fix() \end{verb} for K=2 and K=3.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{classtpx}\hlopt{::}\hlkwd{class_topics}\hlstd{(}
+    \hlstd{counts_data,}
+    \hlkwc{K}\hlstd{=}\hlnum{2}\hlstd{,}
+    \hlkwc{known_samples} \hlstd{= known_samples,}
+    \hlkwc{class_labs} \hlstd{= class_labs,}
+    \hlkwc{method}\hlstd{=}\hlstr{"theta.fix"}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{,}
+    \hlkwc{shrink}\hlstd{=}\hlnum{FALSE}\hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../rdas/treutlin_topic_fit_2_classtpx_theta_fix.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlkwc{file}\hlstd{=}\hlstr{"../data/treutlin_topic_fit_2_classtpx_theta_fix.rda"}\hlstd{))}
+
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega;}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(}\hlkwd{paste0}\hlstd{(pheno_metadata}\hlopt{$}\hlstd{cell_type,} \hlstr{"_"}\hlstd{,}
+                               \hlstd{pheno_metadata}\hlopt{$}\hlstd{replicate),}
+                        \hlkwc{levels}\hlstd{=}\hlkwd{rev}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"E14.5_1"}\hlstd{,} \hlstr{"E16.5_1"}\hlstd{,}
+                                     \hlstr{"E18.5_1"}\hlstd{,}\hlstr{"E18.5_2"}\hlstd{,}
+                                     \hlstr{"E18.5_3"}\hlstd{,}\hlstr{"adult_replicate"}\hlstd{))}
+\hlstd{))}
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
+
+
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_treutlin_classtpx_theta_fix_2-1} 
+
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{classtpx}\hlopt{::}\hlkwd{class_topics}\hlstd{(}
+    \hlstd{counts_data,}
+    \hlkwc{K}\hlstd{=}\hlnum{2}\hlstd{,}
+    \hlkwc{known_samples} \hlstd{= known_samples,}
+    \hlkwc{class_labs} \hlstd{= class_labs,}
+    \hlkwc{method}\hlstd{=}\hlstr{"theta.fix"}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{,}
+    \hlkwc{shrink}\hlstd{=}\hlnum{FALSE}\hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../rdas/treutlin_topic_fit_3_classtpx_theta_fix.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlkwc{file}\hlstd{=}\hlstr{"../data/treutlin_topic_fit_3_classtpx_theta_fix.rda"}\hlstd{))}
+
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega;}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(}\hlkwd{paste0}\hlstd{(pheno_metadata}\hlopt{$}\hlstd{cell_type,} \hlstr{"_"}\hlstd{,}
+                               \hlstd{pheno_metadata}\hlopt{$}\hlstd{replicate),}
+                        \hlkwc{levels}\hlstd{=}\hlkwd{rev}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"E14.5_1"}\hlstd{,} \hlstr{"E16.5_1"}\hlstd{,}
+                                     \hlstr{"E18.5_1"}\hlstd{,}\hlstr{"E18.5_2"}\hlstd{,}
+                                     \hlstr{"E18.5_3"}\hlstd{,}\hlstr{"adult_replicate"}\hlstd{))}
+\hlstd{))}
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
+
+
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_treutlin_classtpx_theta_fix_3-1} 
+
+\end{knitrout}
+
+\subsection{Scialdone et al (2015)}
+
+Scialdone et al sequenced bulk-FACS sorted cells from phases G1, S and G2M phases. Also they sequenced a number of liver cells and they showed from PCA analysis that most of these liver cells seemed close to the G1 phase data. This was intuitive as most of these differentiated liver cells are in G1 phase. We perform classtpx here on the liver cells taking the bulk-RNA FACS sorted data from G1, S and G2M phases to represent three classes or clusters.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{devtools}\hlopt{::}\hlkwd{install_github}\hlstd{(}\hlstr{"jhsiao999/singleCellRNASeqMouseScialdoneLiver"}\hlstd{,} \hlkwc{force}\hlstd{=}\hlnum{TRUE}\hlstd{);}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(singleCellRNASeqMouseScialdoneLiver)}
+\hlkwd{data}\hlstd{(}\hlstr{"MouseScialdoneLiver"}\hlstd{)}
+\hlstd{liver_data} \hlkwb{<-} \hlkwd{t}\hlstd{(Biobase}\hlopt{::}\hlkwd{exprs}\hlstd{(MouseScialdoneLiver));}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+Now we install the bulk FACS sorted cell cycle data from Scialdone et al (2015).
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{devtools}\hlopt{::}\hlkwd{install_github}\hlstd{(}\hlstr{"jhsiao999/bulkRNASeqMouseScialdoneESC"}\hlstd{,} \hlkwc{force}\hlstd{=}\hlnum{TRUE}\hlstd{);}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(bulkRNASeqMouseScialdoneESC)}
+\hlkwd{data}\hlstd{(}\hlstr{"MouseScialdoneESC"}\hlstd{)}
+\hlstd{facs_data} \hlkwb{<-} \hlkwd{t}\hlstd{(Biobase}\hlopt{::}\hlkwd{exprs}\hlstd{(MouseScialdoneESC));}
+\hlstd{facs_pheno_metadata} \hlkwb{<-} \hlkwd{pData}\hlstd{(MouseScialdoneESC);}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{indices_intersect} \hlkwb{<-} \hlkwd{intersect}\hlstd{(}\hlkwd{featureNames}\hlstd{(MouseScialdoneESC),} \hlkwd{featureNames}\hlstd{(MouseScialdoneLiver))}
+
+\hlstd{matched_liver} \hlkwb{<-}  \hlkwd{match}\hlstd{(indices_intersect,} \hlkwd{featureNames}\hlstd{(MouseScialdoneLiver))}
+\hlstd{liver_data_mod} \hlkwb{<-} \hlstd{liver_data[,matched_liver];}
+\hlkwd{colnames}\hlstd{(liver_data_mod)} \hlkwb{<-} \hlstd{indices_intersect;}
+
+\hlstd{matched_facs} \hlkwb{<-} \hlkwd{match}\hlstd{(indices_intersect,} \hlkwd{featureNames}\hlstd{(MouseScialdoneESC))}
+\hlstd{facs_data_mod} \hlkwb{<-} \hlstd{facs_data[,matched_facs];}
+\hlkwd{colnames}\hlstd{(facs_data_mod)} \hlkwb{<-}  \hlstd{indices_intersect;}
+
+\hlstd{counts} \hlkwb{<-} \hlkwd{rbind}\hlstd{(facs_data_mod, liver_data_mod);}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+We now fit the classtpx model with the first three samples (bulk FACS sorted data representing
+cell cycle classes G1, S and G2M respectively) assumed to be from known classes.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{known_samples} \hlkwb{<-} \hlnum{1}\hlopt{:}\hlnum{3}\hlstd{;}
+\hlstd{class_labs} \hlkwb{<-}  \hlnum{1}\hlopt{:}\hlnum{3}\hlstd{;}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+
+
+
+
+
+
+
+
+
+
