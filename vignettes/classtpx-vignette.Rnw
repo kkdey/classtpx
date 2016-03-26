@@ -53,15 +53,14 @@ The Grade of Membership (GoM) model, as fitted by the \begin{verb} topics() \end
 To install the current working version of the \classtpx{} package, make sure FORTRAN compatibility.
 
 <<command_line, echo=TRUE, eval=FALSE>>=
-curl -O http://r.research.att.com/libs/gfortran-4.8.2-darwin13.tar.bz2
-sudo tar fvxz gfortran-4.8.2-darwin13.tar.bz2 -C /
-@
+#curl -O http://r.research.att.com/libs/gfortran-4.8.2-darwin13.tar.bz2
+#sudo tar fvxz gfortran-4.8.2-darwin13.tar.bz2 -C /
+@ 
 
 To install the Github working version,
 
-<<install_classtpx, echo=TRUE, eval=TRUE>>=
-library(devtools)
-install_github("kkdey/classtpx")
+<<install_classtpx, echo=TRUE, eval=FALSE>>=
+devtools::install_github("kkdey/classtpx")
 @
 
 To load the package
@@ -485,7 +484,7 @@ Topic_clus <- classtpx::class_topics(
     tol=0.01,
     shrink=FALSE)
 
-save(Topic_clus, file="../rdas/treutlin_topic_fit_3_classtpx_theta_fix.rda")
+save(Topic_clus, file="../data/treutlin_topic_fit_3_classtpx_theta_fix.rda")
 @
 
 <<structure_treutlin_classtpx_theta_fix_3, echo=TRUE, eval=TRUE, warning=FALSE, fig.show="asis", dpi=144, fig.width=3, fig.height=5, out.height="5 in", out.width="3 in">>=
@@ -521,8 +520,9 @@ CountClust::StructureGGplot(omega = omega,
 
 Scialdone et al sequenced bulk-FACS sorted cells from phases G1, S and G2M phases. Also they sequenced a number of liver cells and they showed from PCA analysis that most of these liver cells seemed close to the G1 phase data. This was intuitive as most of these differentiated liver cells are in G1 phase. We perform classtpx here on the liver cells taking the bulk-RNA FACS sorted data from G1, S and G2M phases to represent three classes or clusters.
 
-<<scialdone_data_install, echo=TRUE, eval=TRUE>>=
-devtools::install_github("jhsiao999/singleCellRNASeqMouseScialdoneLiver", force=TRUE);
+<<scialdone_data_install, echo=TRUE, eval=FALSE>>=
+devtools::install_github("jhsiao999/singleCellRNASeqMouseScialdoneLiver", 
+                         force=TRUE);
 @
 
 <<scialdone_data_prepare, eval=TRUE>>=
@@ -533,7 +533,7 @@ liver_data <- t(Biobase::exprs(MouseScialdoneLiver));
 
 Now we install the bulk FACS sorted cell cycle data from Scialdone et al (2015).
 
-<<scialdone_data_install_2, echo=TRUE, eval=TRUE>>=
+<<scialdone_data_install_2, echo=TRUE, eval=FALSE>>=
 devtools::install_github("jhsiao999/bulkRNASeqMouseScialdoneESC", force=TRUE);
 @
 
@@ -545,7 +545,8 @@ facs_pheno_metadata <- pData(MouseScialdoneESC);
 @ %def
 
 <<matching_features, echo=TRUE, eval=TRUE>>=
-indices_intersect <- intersect(featureNames(MouseScialdoneESC), featureNames(MouseScialdoneLiver))
+indices_intersect <- intersect(featureNames(MouseScialdoneESC), 
+                               featureNames(MouseScialdoneLiver))
 
 matched_liver <-  match(indices_intersect, featureNames(MouseScialdoneLiver))
 liver_data_mod <- liver_data[,matched_liver];
@@ -566,7 +567,7 @@ known_samples <- 1:3;
 class_labs <-  1:3;
 @ %def
 
-<<classtpx_scialdone_omega_fix_3, eval=TRUE>>=
+<<classtpx_scialdone_omega_fix_3, eval=FALSE>>=
 Topic_clus <- classtpx::class_topics(
     counts, 
     K=3, 
@@ -575,9 +576,14 @@ Topic_clus <- classtpx::class_topics(
     method="omega.fix",
     tol=0.01,
     shrink=FALSE)
+
+save(Topic_clus, file="../data/scialdone_topic_fit_3_classtpx_omega_fix.rda")
+
 @
 
 <<structure_scialdone_classtpx_omega_fix_3, echo=TRUE, eval=TRUE, warning=FALSE, fig.show="asis", dpi=144, fig.width=3, fig.height=5, out.height="5 in", out.width="3 in">>=
+
+Topic_clus <- get(load("../data/scialdone_topic_fit_3_classtpx_omega_fix.rda"))
 omega <- Topic_clus$omega[-(1:3),];
 
 annotation <- data.frame(
@@ -602,7 +608,7 @@ CountClust::StructureGGplot(omega = omega,
 
 Note that all the cells seem to be represented by the first class which corresponds to the G1 phase. We perform the same analysis with \begin{verb} theta.fix() \end{verb} method.
 
-<<classtpx_scialdone_theta_fix_3, eval=TRUE>>=
+<<classtpx_scialdone_theta_fix_3, eval=FALSE>>=
 Topic_clus <- classtpx::class_topics(
     counts, 
     K=3, 
@@ -611,9 +617,13 @@ Topic_clus <- classtpx::class_topics(
     method="theta.fix",
     tol=0.01,
     shrink=FALSE)
+
+save(Topic_clus, file="../data/scialdone_topic_fit_3_classtpx_theta_fix.rda")
 @
 
 <<structure_scialdone_classtpx_theta_fix_3, echo=TRUE, eval=TRUE, warning=FALSE, fig.show="asis", dpi=144, fig.width=3, fig.height=5, out.height="5 in", out.width="3 in">>=
+
+Topic_clus <- get(load("../data/scialdone_topic_fit_3_classtpx_theta_fix.rda"))
 omega <- Topic_clus$omega[-(1:3),];
 
 annotation <- data.frame(
@@ -637,6 +647,269 @@ CountClust::StructureGGplot(omega = omega,
 @ %def
 
 Here also maximum representativeness is due to the cluster from G1 phase.
+
+\subsection{Buettner et al 2015 + Leng et al 2015}
+
+Buettner et al 2015 collected single cell RNA-seq FACS sorted data from cell cycle phases G1, G2 and S from mouse. Leng et al 2015 collected FACS sorted data from G1, G2 and S for humans. The idea was to see if we can use the FACS sorted mouse data coming from three cell cycle phases G1, G2 and S, to learn about human data and predict the cell cycle phases of the human data correctly.
+
+The one barrier to doing so is that the genes in humans and those in mouse are different. But there are many ortholog genes which are common between the two species and we extract such genes out using BioMart. 
+
+First we install and load the mouse single cell RNA-seq data due to Buettner et al 2015. 
+
+<<buettner_data_install, echo=TRUE, eval=FALSE>>=
+devtools::install_github("jhsiao999/singleCellRNASeqMouseBuettnerESC", force=TRUE)
+@
+
+<<buettner_data_prepare, echo=TRUE, eval=TRUE>>=
+library(singleCellRNASeqMouseBuettnerESC)
+data("MouseBuettnerESC")
+buettner_gene_names <- Biobase::featureNames(MouseBuettnerESC);
+
+buettner_data <- Biobase::exprs(MouseBuettnerESC);
+buettner_metadata <- Biobase::pData(MouseBuettnerESC)
+buettner_cell_state <- buettner_metadata$cell_cycle;
+
+table(buettner_cell_state)
+@
+
+We now extract the ortholog genes common between the Leng et al 2015 data and the Buettner et al 2015 data.
+
+<<ortholog_genes, echo=TRUE, eval=TRUE>>=
+library(biomaRt)
+human = useMart("ensembl", dataset = "hsapiens_gene_ensembl");
+attributes = c("ensembl_gene_id","mmusculus_homolog_ensembl_gene",
+               "mmusculus_homolog_perc_id_r1")
+attributes=c(attributes,"mmusculus_homolog_orthology_type",
+"mmusculus_homolog_subtype", "mmusculus_homolog_perc_id")
+orth.mouse.human = getBM(attributes,
+filters="with_homolog_mmus",values=TRUE, mart = human,
+uniqueRows=TRUE)
+@ %def
+
+We determine those ortholog human genes obtained above which have valid HGNC symbol 
+which has been used to report feature names in the Leng et al 2015 data
+
+<<ortholog_genes_2, echo=TRUE, eval=TRUE>>=
+filter_indices <- match(buettner_gene_names, orth.mouse.human[,2]);
+filter_indices <- filter_indices[!is.na(filter_indices)];
+ortholog_buettner_mouse_ids <- orth.mouse.human[filter_indices,2];
+ortholog_buettner_human_ids <- orth.mouse.human[filter_indices,1];
+
+human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+mySymbols <- ortholog_buettner_human_ids; # mySymbols is a vector of MGI symbols.
+gene_list_human <- getBM( attributes=c("ensembl_gene_id", "hgnc_symbol") , filters=
+"ensembl_gene_id", values =mySymbols ,mart=human)
+
+gene_names_human <- gene_list_human[,2];
+@ %def
+
+We filter the Leng et al data
+
+<<ortholog_genes_3, echo=TRUE, eval=TRUE>>=
+matched_human_gene_indices_leng <- match(gene_names_human, leng_gene_names)
+matched_human_gene_indices_leng <- 
+  matched_human_gene_indices_leng[!is.na(matched_human_gene_indices_leng)];
+
+
+matched_genes_leng <- leng_gene_names[matched_human_gene_indices_leng];
+
+filter_indices <- match(matched_genes_leng, leng_gene_names);
+
+leng_filtered_data <- leng_data[,filter_indices];
+@ %def
+
+Next we filter the Buettner et al data
+
+<<ortholog_genes_4, echo=TRUE, eval=TRUE>>=
+filter_indices <- match(gene_names_human, leng_gene_names);
+gene_list_human_filtered <- gene_list_human[which(!is.na(filter_indices)),];
+gene_names_human_filtered <- gene_list_human_filtered[,1];
+human_ids_buettner <- 
+  ortholog_buettner_human_ids[match(gene_names_human_filtered, 
+                                    ortholog_buettner_human_ids)];
+mouse_ortholog_ids_buettner <- 
+  ortholog_buettner_mouse_ids[match(gene_names_human_filtered, 
+                                    ortholog_buettner_human_ids)];
+
+filter_genes_buettner <- match(mouse_ortholog_ids_buettner, buettner_gene_names);
+
+buettner_filtered_data <- t(buettner_data[filter_genes_buettner,]);
+
+@ %def
+
+We pool the filtered data from Leng et al and Buettner et al containing expression patterns of ortholog matched genes.
+
+<<pooled_data, echo=TRUE>>=
+pooled_data <- rbind(buettner_filtered_data, leng_filtered_data);
+@
+
+We first apply the \begin{verb} topics() \end{verb} of the \begin{verb} maptpx() \end{verb} package to detrmine the unsupervised clustering patterns. 
+
+<<ortholog_maptpx, echo=TRUE, eval=FALSE>>=
+Topic_clus <- maptpx::topics(
+    pooled_data, 
+    K=3, 
+    tol=0.1
+    )
+
+save(Topic_clus, file="../data/leng_topic_fit_3_maptpx_buettner.rda")
+@
+
+<<structure_ortholog_maptpx,  echo=TRUE, eval=TRUE, warning=FALSE, fig.show="asis", dpi=144, fig.width=3, fig.height=5, out.height="5 in", out.width="3 in">>=
+
+Topic_clus <- get(load(file="../data/leng_topic_fit_3_maptpx_buettner.rda"))
+
+omega <- Topic_clus$omega;
+
+leng_cell_state_human <- paste0("human", "_", leng_cell_state);
+buettner_cell_state_mouse <- paste0("mouse","_", buettner_cell_state);
+
+annotation <- data.frame(
+  sample_id = paste0("X", c(1:NROW(omega))),
+  tissue_label = factor(c(as.character(buettner_cell_state_mouse), 
+                          as.character(leng_cell_state_human)),
+                        levels = c("mouse_G1", "mouse_S", "mouse_G2M",
+                                        "human_G1","human_S",
+                                         "human_G2", "human_H1") ) )
+
+
+rownames(omega) <- annotation$sample_id;
+
+
+CountClust::StructureGGplot(omega = omega,
+                annotation = annotation,
+                palette = RColorBrewer::brewer.pal(8, "Accent"),
+                yaxis_label = "Cell cycle phase",
+                order_sample = TRUE,
+                axis_tick = list(axis_ticks_length = .1,
+                                 axis_ticks_lwd_y = .1,
+                                 axis_ticks_lwd_x = .1,
+                                 axis_label_size = 7,
+                                 axis_label_face = "bold"))
+@
+
+Note that when the clustering is performed over mouse and human ortholog genes together, it seems to pick up those genes that separate the two species rather than finding out cell-cycle related structure. This is again more intuitive I guess as the inter species differences are way stronger than the cell cycle effect. 
+
+We next performed classtpx model by using the mouse data as training sample and we fit $K=3$ model with both \begin{verb} omega.fix() \end{verb} and \begin{verb} theta.fix() \end{verb} methods.
+
+<<class_labels_ortholog, eval=TRUE>>=
+known_samples <- 1:288;
+class_labs <- c(rep(1,96), rep(2,96), rep(3,96));
+@ %def
+
+<<classtpx_ortholog_omega_fix_3, eval=FALSE>>=
+Topic_clus <- classtpx::class_topics(
+    counts, 
+    K=3, 
+    known_samples = known_samples,
+    class_labs = class_labs,
+    method="omega.fix",
+    tol=0.01,
+    shrink=FALSE)
+
+save(Topic_clus, file="../data/leng_topic_fit_classtpx_omega_fix_buettner.rda")
+@
+
+<<structure_ortholog_classtpx_omega_fix_3, echo=TRUE, eval=TRUE, warning=FALSE, fig.show="asis", dpi=144, fig.width=3, fig.height=5, out.height="5 in", out.width="3 in">>=
+
+Topic_clus <- get(load("../data/leng_topic_fit_classtpx_omega_fix_buettner.rda"))
+omega <- Topic_clus$omega;
+
+leng_cell_state_human <- paste0("human", "_", leng_cell_state);
+buettner_cell_state_mouse <- paste0("mouse","_", buettner_cell_state);
+
+annotation <- data.frame(
+  sample_id = paste0("X", c(1:NROW(omega))),
+  tissue_label = factor(c(as.character(buettner_cell_state_mouse), 
+                          as.character(leng_cell_state_human)),
+                        levels = c("mouse_G1", "mouse_S", "mouse_G2M",
+                                        "human_G1","human_S",
+                                         "human_G2", "human_H1") ) )
+
+
+rownames(omega) <- annotation$sample_id;
+
+
+CountClust::StructureGGplot(omega = omega,
+                annotation = annotation,
+                palette = RColorBrewer::brewer.pal(8, "Accent"),
+                yaxis_label = "Cell cycle phase",
+                order_sample = TRUE,
+                axis_tick = list(axis_ticks_length = .1,
+                                 axis_ticks_lwd_y = .1,
+                                 axis_ticks_lwd_x = .1,
+                                 axis_label_size = 7,
+                                 axis_label_face = "bold"))
+@ %def
+
+<<classtpx_ortholog_theta_fix_3, eval=FALSE>>=
+Topic_clus <- classtpx::class_topics(
+    pooled_data, 
+    K=3, 
+    known_samples = known_samples,
+    class_labs = class_labs,
+    method="theta.fix",
+    tol=0.01,
+    shrink=FALSE)
+
+save(Topic_clus, file="../data/leng_topic_fit_classtpx_theta_fix_buettner.rda")
+@
+
+<<structure_ortholog_classtpx_theta_fix_3, echo=TRUE, eval=TRUE, warning=FALSE, fig.show="asis", dpi=144, fig.width=3, fig.height=5, out.height="5 in", out.width="3 in">>=
+
+Topic_clus <- get(load("../data/leng_topic_fit_classtpx_theta_fix_buettner.rda"))
+omega <- Topic_clus$omega;
+
+leng_cell_state_human <- paste0("human", "_", leng_cell_state);
+buettner_cell_state_mouse <- paste0("mouse","_", buettner_cell_state);
+
+annotation <- data.frame(
+  sample_id = paste0("X", c(1:NROW(omega))),
+  tissue_label = factor(c(as.character(buettner_cell_state_mouse), 
+                          as.character(leng_cell_state_human)),
+                        levels = c("mouse_G1", "mouse_S", "mouse_G2M",
+                                        "human_G1","human_S",
+                                         "human_G2", "human_H1") ) )
+
+
+rownames(omega) <- annotation$sample_id;
+
+
+CountClust::StructureGGplot(omega = omega,
+                annotation = annotation,
+                palette = RColorBrewer::brewer.pal(8, "Accent"),
+                yaxis_label = "Cell cycle phase",
+                order_sample = TRUE,
+                axis_tick = list(axis_ticks_length = .1,
+                                 axis_ticks_lwd_y = .1,
+                                 axis_ticks_lwd_x = .1,
+                                 axis_label_size = 7,
+                                 axis_label_face = "bold"))
+@ %def
+
+The above analysis (especially for the \begin{verb} theta.fix \end{verb} approach) shows that the cluster patterns obtained from cell cycle phases of mouse does not quite explain the patterns in the human data. One reason could be because we have pooled all the ortholog genes in this analysis
+and not just the cell-cycle related genes. It could also mean the orthologs of cell-cycle genes for mouse may not be cell-cycle related genes for humans.
+
+\section{Discussion}
+
+\begin{itemize}
+
+\item Since the number of features (genes) is usually way larger than the number of samples in RNA-seq data, it is important to protect the analysis from noisy genes which are not informative biologically but incorporate a lot of variation that can compromise the results. We use the adaptive shrinkage method (check Methods and Materials) through \begin{verb} shrink=TRUE \end{verb} to effectively reweigh the variables based on their within-class variation. The shrinkage method adopted may be improved by using FASH due to Mengyin Lu \url{https://github.com/mengyin/ashlar-fash}. Her model shrinks the F-statistics derived from the following linear model (which may be applied on voom transformed data)
+
+\begin{equation}
+Y_{ng}=\mu_{g}+\beta_{cl(n),g}+e_{ng} \hspace{1 cm} \beta_{cl(n),g} \sim N(0, \sigma^2) \hspace{1 cm} e_{ng} \sim N(0, s^2)
+\end{equation}
+
+However I am not sure how I can go from shrunk F-statistics in this model to shrunk estimates 
+of $\beta$ values, which I think is what I may need ultimately to obtain refined estimates of $\theta$.
+
+\item We may want to indicate in the Structure plot visualization, which samples have known class labels and what that class label is, compared to the ones for which we have no information about class labels. This would be particularly handy in case of \begin{verb} theta.fix() \end{verb} or \begin{verb} theta.prior \end{verb} models where it is not clear just from viewing the Structure plot, which of the samples have known cluster memberships.
+
+\item So far the attempt has been to take data from multiple experiments across labs and then check how far the knowledge of patterns from experiment in one lab can explain the patterns in the other. But there seems to be differences probably resulting from lab effects or batch or plate effects (cases in point: Buettner + Scialdone 2015 data analysis, Deng et al 2014 + Blakeley et al 2015 data analysis).
+
+\item For additional simulated data and  real data applications of the \classtpx{} package, please check \textit{Cell classification using classtpx} section in \url{http://jhsiao999.github.io/singleCell-method/} and for codes and source files, please check: \url{https://github.com/kkdey/classtpx}.
+
+\end{itemize}
 
 
 \section{Session Info}

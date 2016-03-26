@@ -1,7 +1,11 @@
 \contentsline {section}{\numberline {1}Introduction}{2}{section.1}
-\contentsline {section}{\numberline {2}Data Preparation}{2}{section.2}
-\contentsline {section}{\numberline {3}Methods and Materials}{3}{section.3}
-\contentsline {section}{\numberline {4}Results}{5}{section.4}
-\contentsline {subsection}{\numberline {4.1}Leng et al (2015)}{5}{subsection.4.1}
-\contentsline {subsection}{\numberline {4.2}Treutlin et al (2014)}{10}{subsection.4.2}
-\contentsline {section}{\numberline {5}Session Info}{17}{section.5}
+\contentsline {section}{\numberline {2}Installation}{2}{section.2}
+\contentsline {section}{\numberline {3}Data Preparation}{3}{section.3}
+\contentsline {section}{\numberline {4}Methods and Materials}{3}{section.4}
+\contentsline {section}{\numberline {5}Results}{5}{section.5}
+\contentsline {subsection}{\numberline {5.1}Leng et al (2015)}{6}{subsection.5.1}
+\contentsline {subsection}{\numberline {5.2}Treutlin et al (2014)}{11}{subsection.5.2}
+\contentsline {subsection}{\numberline {5.3}Scialdone et al (2015)}{17}{subsection.5.3}
+\contentsline {subsection}{\numberline {5.4}Buettner et al 2015 + Leng et al 2015}{21}{subsection.5.4}
+\contentsline {section}{\numberline {6}Discussion}{28}{section.6}
+\contentsline {section}{\numberline {7}Session Info}{29}{section.7}

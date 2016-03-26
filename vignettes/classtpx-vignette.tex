@@ -7,7 +7,56 @@
 % library('knitr'); rm(list=ls()); knit2pdf('classtpx/vignettes/classtpx-vignette.Rnw'); openPDF('classtpx-vignette.pdf')
 %
 
-\documentclass[12pt]{article}
+\documentclass[12pt]{article}\usepackage[]{graphicx}\usepackage[usenames,dvipsnames]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
 
 \newcommand{\classtpx}{\textit{classtpx}}
 \newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
@@ -27,7 +76,7 @@
 \author{Kushal K Dey, Chiaowen Joyce Hsiao \& Matthew Stephens \\[1em] \small{\textit{Stephens Lab}, The University of Chicago} \mbox{ }\\ \small{\texttt{$^*$Correspondending Email: mstephens@uchicago.edu}}}
 
 \bioctitle[Semi supervised Grade of Membership models for RNA-seq data using \classtpx{}]{Semi supervised Grade of Membership models for RNA-seq data using \classtpx{}}
-
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
 \begin{document}
 
 \maketitle
@@ -41,6 +90,41 @@
 \section{Introduction}
 
 The Grade of Membership (GoM) model, as fitted by the \begin{verb} topics() \end{verb} function of the package \CRANpkg{maptpx} or the \begin{verb} FitGoM() \end{verb} in the package CountClust, suffers from the issue of identifiability, the reason being clusters that are determined in a completely unsupervised way. Oftentimes, we may have information about expression patterns of the biological clusters of interest. To cite an example, suppose we have RNA-seq data on blood samples (bulk or single cell) and also RNA-seq data on some FACS sorted single cells from Blood identifying different Blood cell types. Sequencing these FACS sorted cells gives us information of the expression patterns of the underlying cell types. One can view these cell types as potential clusters in clustering of RNA-seq data (non FACS sorted) from Blood. It is this prior information about the clusters that can ultimately lead to more distinct patterns of expression compared to unsupervised models and give a better sense about the mixing proportions of different cell types of interest in the samples.
+
+\section{Installation}
+
+To install the current working version of the \classtpx{} package, make sure FORTRAN compatibility.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{#curl -O http://r.research.att.com/libs/gfortran-4.8.2-darwin13.tar.bz2}
+\hlcom{#sudo tar fvxz gfortran-4.8.2-darwin13.tar.bz2 -C /}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+To install the Github working version,
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{devtools}\hlopt{::}\hlkwd{install_github}\hlstd{(}\hlstr{"kkdey/classtpx"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+To load the package
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(}\hlstr{"classtpx"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+
 
 \section{Data Preparation}
 
@@ -550,7 +634,7 @@ We perform the method with \begin{verb} theta.fix() \end{verb} for K=2 and K=3.
     \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{,}
     \hlkwc{shrink}\hlstd{=}\hlnum{FALSE}\hlstd{)}
 
-\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../rdas/treutlin_topic_fit_3_classtpx_theta_fix.rda"}\hlstd{)}
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../data/treutlin_topic_fit_3_classtpx_theta_fix.rda"}\hlstd{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -597,7 +681,8 @@ Scialdone et al sequenced bulk-FACS sorted cells from phases G1, S and G2M phase
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{devtools}\hlopt{::}\hlkwd{install_github}\hlstd{(}\hlstr{"jhsiao999/singleCellRNASeqMouseScialdoneLiver"}\hlstd{,} \hlkwc{force}\hlstd{=}\hlnum{TRUE}\hlstd{);}
+\hlstd{devtools}\hlopt{::}\hlkwd{install_github}\hlstd{(}\hlstr{"jhsiao999/singleCellRNASeqMouseScialdoneLiver"}\hlstd{,}
+                         \hlkwc{force}\hlstd{=}\hlnum{TRUE}\hlstd{);}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
@@ -636,7 +721,8 @@ Now we install the bulk FACS sorted cell cycle data from Scialdone et al (2015).
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 \begin{alltt}
-\hlstd{indices_intersect} \hlkwb{<-} \hlkwd{intersect}\hlstd{(}\hlkwd{featureNames}\hlstd{(MouseScialdoneESC),} \hlkwd{featureNames}\hlstd{(MouseScialdoneLiver))}
+\hlstd{indices_intersect} \hlkwb{<-} \hlkwd{intersect}\hlstd{(}\hlkwd{featureNames}\hlstd{(MouseScialdoneESC),}
+                               \hlkwd{featureNames}\hlstd{(MouseScialdoneLiver))}
 
 \hlstd{matched_liver} \hlkwb{<-}  \hlkwd{match}\hlstd{(indices_intersect,} \hlkwd{featureNames}\hlstd{(MouseScialdoneLiver))}
 \hlstd{liver_data_mod} \hlkwb{<-} \hlstd{liver_data[,matched_liver];}
@@ -663,13 +749,482 @@ cell cycle classes G1, S and G2M respectively) assumed to be from known classes.
 \end{kframe}
 \end{knitrout}
 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{classtpx}\hlopt{::}\hlkwd{class_topics}\hlstd{(}
+    \hlstd{counts,}
+    \hlkwc{K}\hlstd{=}\hlnum{3}\hlstd{,}
+    \hlkwc{known_samples} \hlstd{= known_samples,}
+    \hlkwc{class_labs} \hlstd{= class_labs,}
+    \hlkwc{method}\hlstd{=}\hlstr{"omega.fix"}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{,}
+    \hlkwc{shrink}\hlstd{=}\hlnum{FALSE}\hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../data/scialdone_topic_fit_3_classtpx_omega_fix.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlstr{"../data/scialdone_topic_fit_3_classtpx_omega_fix.rda"}\hlstd{))}
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega[}\hlopt{-}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{3}\hlstd{),];}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(}\hlkwd{as.character}\hlstd{(}\hlkwd{rep}\hlstd{(}\hlstr{"Liver"}\hlstd{,}\hlnum{96}\hlstd{)))}
+\hlstd{)}
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
 
 
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_scialdone_classtpx_omega_fix_3-1} 
+
+\end{knitrout}
+
+Note that all the cells seem to be represented by the first class which corresponds to the G1 phase. We perform the same analysis with \begin{verb} theta.fix() \end{verb} method.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{classtpx}\hlopt{::}\hlkwd{class_topics}\hlstd{(}
+    \hlstd{counts,}
+    \hlkwc{K}\hlstd{=}\hlnum{3}\hlstd{,}
+    \hlkwc{known_samples} \hlstd{= known_samples,}
+    \hlkwc{class_labs} \hlstd{= class_labs,}
+    \hlkwc{method}\hlstd{=}\hlstr{"theta.fix"}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{,}
+    \hlkwc{shrink}\hlstd{=}\hlnum{FALSE}\hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../data/scialdone_topic_fit_3_classtpx_theta_fix.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlstr{"../data/scialdone_topic_fit_3_classtpx_theta_fix.rda"}\hlstd{))}
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega[}\hlopt{-}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{3}\hlstd{),];}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(}\hlkwd{as.character}\hlstd{(}\hlkwd{rep}\hlstd{(}\hlstr{"Liver"}\hlstd{,}\hlnum{96}\hlstd{)))}
+\hlstd{)}
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
 
 
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_scialdone_classtpx_theta_fix_3-1} 
+
+\end{knitrout}
+
+Here also maximum representativeness is due to the cluster from G1 phase.
+
+\subsection{Buettner et al 2015 + Leng et al 2015}
+
+Buettner et al 2015 collected single cell RNA-seq FACS sorted data from cell cycle phases G1, G2 and S from mouse. Leng et al 2015 collected FACS sorted data from G1, G2 and S for humans. The idea was to see if we can use the FACS sorted mouse data coming from three cell cycle phases G1, G2 and S, to learn about human data and predict the cell cycle phases of the human data correctly.
+
+The one barrier to doing so is that the genes in humans and those in mouse are different. But there are many ortholog genes which are common between the two species and we extract such genes out using BioMart. 
+
+First we install and load the mouse single cell RNA-seq data due to Buettner et al 2015. 
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{devtools}\hlopt{::}\hlkwd{install_github}\hlstd{(}\hlstr{"jhsiao999/singleCellRNASeqMouseBuettnerESC"}\hlstd{,} \hlkwc{force}\hlstd{=}\hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(singleCellRNASeqMouseBuettnerESC)}
+\hlkwd{data}\hlstd{(}\hlstr{"MouseBuettnerESC"}\hlstd{)}
+\hlstd{buettner_gene_names} \hlkwb{<-} \hlstd{Biobase}\hlopt{::}\hlkwd{featureNames}\hlstd{(MouseBuettnerESC);}
+
+\hlstd{buettner_data} \hlkwb{<-} \hlstd{Biobase}\hlopt{::}\hlkwd{exprs}\hlstd{(MouseBuettnerESC);}
+\hlstd{buettner_metadata} \hlkwb{<-} \hlstd{Biobase}\hlopt{::}\hlkwd{pData}\hlstd{(MouseBuettnerESC)}
+\hlstd{buettner_cell_state} \hlkwb{<-} \hlstd{buettner_metadata}\hlopt{$}\hlstd{cell_cycle;}
+
+\hlkwd{table}\hlstd{(buettner_cell_state)}
+\end{alltt}
+\begin{verbatim}
+## buettner_cell_state
+##  G1 G2M   S 
+##  96  96  96
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+We now extract the ortholog genes common between the Leng et al 2015 data and the Buettner et al 2015 data.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(biomaRt)}
+\hlstd{human} \hlkwb{=} \hlkwd{useMart}\hlstd{(}\hlstr{"ensembl"}\hlstd{,} \hlkwc{dataset} \hlstd{=} \hlstr{"hsapiens_gene_ensembl"}\hlstd{);}
+\hlstd{attributes} \hlkwb{=} \hlkwd{c}\hlstd{(}\hlstr{"ensembl_gene_id"}\hlstd{,}\hlstr{"mmusculus_homolog_ensembl_gene"}\hlstd{,}
+               \hlstr{"mmusculus_homolog_perc_id_r1"}\hlstd{)}
+\hlstd{attributes}\hlkwb{=}\hlkwd{c}\hlstd{(attributes,}\hlstr{"mmusculus_homolog_orthology_type"}\hlstd{,}
+\hlstr{"mmusculus_homolog_subtype"}\hlstd{,} \hlstr{"mmusculus_homolog_perc_id"}\hlstd{)}
+\hlstd{orth.mouse.human} \hlkwb{=} \hlkwd{getBM}\hlstd{(attributes,}
+\hlkwc{filters}\hlstd{=}\hlstr{"with_homolog_mmus"}\hlstd{,}\hlkwc{values}\hlstd{=}\hlnum{TRUE}\hlstd{,} \hlkwc{mart} \hlstd{= human,}
+\hlkwc{uniqueRows}\hlstd{=}\hlnum{TRUE}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+We determine those ortholog human genes obtained above which have valid HGNC symbol 
+which has been used to report feature names in the Leng et al 2015 data
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{filter_indices} \hlkwb{<-} \hlkwd{match}\hlstd{(buettner_gene_names, orth.mouse.human[,}\hlnum{2}\hlstd{]);}
+\hlstd{filter_indices} \hlkwb{<-} \hlstd{filter_indices[}\hlopt{!}\hlkwd{is.na}\hlstd{(filter_indices)];}
+\hlstd{ortholog_buettner_mouse_ids} \hlkwb{<-} \hlstd{orth.mouse.human[filter_indices,}\hlnum{2}\hlstd{];}
+\hlstd{ortholog_buettner_human_ids} \hlkwb{<-} \hlstd{orth.mouse.human[filter_indices,}\hlnum{1}\hlstd{];}
+
+\hlstd{human} \hlkwb{=} \hlkwd{useMart}\hlstd{(}\hlstr{"ensembl"}\hlstd{,} \hlkwc{dataset} \hlstd{=} \hlstr{"hsapiens_gene_ensembl"}\hlstd{)}
+\hlstd{mySymbols} \hlkwb{<-} \hlstd{ortholog_buettner_human_ids;} \hlcom{# mySymbols is a vector of MGI symbols.}
+\hlstd{gene_list_human} \hlkwb{<-} \hlkwd{getBM}\hlstd{(} \hlkwc{attributes}\hlstd{=}\hlkwd{c}\hlstd{(}\hlstr{"ensembl_gene_id"}\hlstd{,} \hlstr{"hgnc_symbol"}\hlstd{) ,} \hlkwc{filters}\hlstd{=}
+\hlstr{"ensembl_gene_id"}\hlstd{,} \hlkwc{values} \hlstd{=mySymbols ,}\hlkwc{mart}\hlstd{=human)}
+
+\hlstd{gene_names_human} \hlkwb{<-} \hlstd{gene_list_human[,}\hlnum{2}\hlstd{];}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+We filter the Leng et al data
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{matched_human_gene_indices_leng} \hlkwb{<-} \hlkwd{match}\hlstd{(gene_names_human, leng_gene_names)}
+\hlstd{matched_human_gene_indices_leng} \hlkwb{<-}
+  \hlstd{matched_human_gene_indices_leng[}\hlopt{!}\hlkwd{is.na}\hlstd{(matched_human_gene_indices_leng)];}
 
 
+\hlstd{matched_genes_leng} \hlkwb{<-} \hlstd{leng_gene_names[matched_human_gene_indices_leng];}
+
+\hlstd{filter_indices} \hlkwb{<-} \hlkwd{match}\hlstd{(matched_genes_leng, leng_gene_names);}
+
+\hlstd{leng_filtered_data} \hlkwb{<-} \hlstd{leng_data[,filter_indices];}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+Next we filter the Buettner et al data
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{filter_indices} \hlkwb{<-} \hlkwd{match}\hlstd{(gene_names_human, leng_gene_names);}
+\hlstd{gene_list_human_filtered} \hlkwb{<-} \hlstd{gene_list_human[}\hlkwd{which}\hlstd{(}\hlopt{!}\hlkwd{is.na}\hlstd{(filter_indices)),];}
+\hlstd{gene_names_human_filtered} \hlkwb{<-} \hlstd{gene_list_human_filtered[,}\hlnum{1}\hlstd{];}
+\hlstd{human_ids_buettner} \hlkwb{<-}
+  \hlstd{ortholog_buettner_human_ids[}\hlkwd{match}\hlstd{(gene_names_human_filtered,}
+                                    \hlstd{ortholog_buettner_human_ids)];}
+\hlstd{mouse_ortholog_ids_buettner} \hlkwb{<-}
+  \hlstd{ortholog_buettner_mouse_ids[}\hlkwd{match}\hlstd{(gene_names_human_filtered,}
+                                    \hlstd{ortholog_buettner_human_ids)];}
+
+\hlstd{filter_genes_buettner} \hlkwb{<-} \hlkwd{match}\hlstd{(mouse_ortholog_ids_buettner, buettner_gene_names);}
+
+\hlstd{buettner_filtered_data} \hlkwb{<-} \hlkwd{t}\hlstd{(buettner_data[filter_genes_buettner,]);}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+We pool the filtered data from Leng et al and Buettner et al containing expression patterns of ortholog matched genes.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{pooled_data} \hlkwb{<-} \hlkwd{rbind}\hlstd{(buettner_filtered_data, leng_filtered_data);}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+We first apply the \begin{verb} topics() \end{verb} of the \begin{verb} maptpx() \end{verb} package to detrmine the unsupervised clustering patterns. 
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{maptpx}\hlopt{::}\hlkwd{topics}\hlstd{(}
+    \hlstd{pooled_data,}
+    \hlkwc{K}\hlstd{=}\hlnum{3}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.1}
+    \hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../data/leng_topic_fit_3_maptpx_buettner.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlkwc{file}\hlstd{=}\hlstr{"../data/leng_topic_fit_3_maptpx_buettner.rda"}\hlstd{))}
+
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega;}
+
+\hlstd{leng_cell_state_human} \hlkwb{<-} \hlkwd{paste0}\hlstd{(}\hlstr{"human"}\hlstd{,} \hlstr{"_"}\hlstd{, leng_cell_state);}
+\hlstd{buettner_cell_state_mouse} \hlkwb{<-} \hlkwd{paste0}\hlstd{(}\hlstr{"mouse"}\hlstd{,}\hlstr{"_"}\hlstd{, buettner_cell_state);}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(}\hlkwd{c}\hlstd{(}\hlkwd{as.character}\hlstd{(buettner_cell_state_mouse),}
+                          \hlkwd{as.character}\hlstd{(leng_cell_state_human)),}
+                        \hlkwc{levels} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"mouse_G1"}\hlstd{,} \hlstr{"mouse_S"}\hlstd{,} \hlstr{"mouse_G2M"}\hlstd{,}
+                                        \hlstr{"human_G1"}\hlstd{,}\hlstr{"human_S"}\hlstd{,}
+                                         \hlstr{"human_G2"}\hlstd{,} \hlstr{"human_H1"}\hlstd{) ) )}
 
 
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
 
 
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_ortholog_maptpx-1} 
+
+\end{knitrout}
+
+Note that when the clustering is performed over mouse and human ortholog genes together, it seems to pick up those genes that separate the two species rather than finding out cell-cycle related structure. This is again more intuitive I guess as the inter species differences are way stronger than the cell cycle effect. 
+
+We next performed classtpx model by using the mouse data as training sample and we fit $K=3$ model with both \begin{verb} omega.fix() \end{verb} and \begin{verb} theta.fix() \end{verb} methods.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{known_samples} \hlkwb{<-} \hlnum{1}\hlopt{:}\hlnum{288}\hlstd{;}
+\hlstd{class_labs} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlkwd{rep}\hlstd{(}\hlnum{1}\hlstd{,}\hlnum{96}\hlstd{),} \hlkwd{rep}\hlstd{(}\hlnum{2}\hlstd{,}\hlnum{96}\hlstd{),} \hlkwd{rep}\hlstd{(}\hlnum{3}\hlstd{,}\hlnum{96}\hlstd{));}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{classtpx}\hlopt{::}\hlkwd{class_topics}\hlstd{(}
+    \hlstd{counts,}
+    \hlkwc{K}\hlstd{=}\hlnum{3}\hlstd{,}
+    \hlkwc{known_samples} \hlstd{= known_samples,}
+    \hlkwc{class_labs} \hlstd{= class_labs,}
+    \hlkwc{method}\hlstd{=}\hlstr{"omega.fix"}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{,}
+    \hlkwc{shrink}\hlstd{=}\hlnum{FALSE}\hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../data/leng_topic_fit_classtpx_omega_fix_buettner.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlstr{"../data/leng_topic_fit_classtpx_omega_fix_buettner.rda"}\hlstd{))}
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega;}
+
+\hlstd{leng_cell_state_human} \hlkwb{<-} \hlkwd{paste0}\hlstd{(}\hlstr{"human"}\hlstd{,} \hlstr{"_"}\hlstd{, leng_cell_state);}
+\hlstd{buettner_cell_state_mouse} \hlkwb{<-} \hlkwd{paste0}\hlstd{(}\hlstr{"mouse"}\hlstd{,}\hlstr{"_"}\hlstd{, buettner_cell_state);}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(}\hlkwd{c}\hlstd{(}\hlkwd{as.character}\hlstd{(buettner_cell_state_mouse),}
+                          \hlkwd{as.character}\hlstd{(leng_cell_state_human)),}
+                        \hlkwc{levels} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"mouse_G1"}\hlstd{,} \hlstr{"mouse_S"}\hlstd{,} \hlstr{"mouse_G2M"}\hlstd{,}
+                                        \hlstr{"human_G1"}\hlstd{,}\hlstr{"human_S"}\hlstd{,}
+                                         \hlstr{"human_G2"}\hlstd{,} \hlstr{"human_H1"}\hlstd{) ) )}
+
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
+
+
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_ortholog_classtpx_omega_fix_3-1} 
+
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlstd{classtpx}\hlopt{::}\hlkwd{class_topics}\hlstd{(}
+    \hlstd{pooled_data,}
+    \hlkwc{K}\hlstd{=}\hlnum{3}\hlstd{,}
+    \hlkwc{known_samples} \hlstd{= known_samples,}
+    \hlkwc{class_labs} \hlstd{= class_labs,}
+    \hlkwc{method}\hlstd{=}\hlstr{"theta.fix"}\hlstd{,}
+    \hlkwc{tol}\hlstd{=}\hlnum{0.01}\hlstd{,}
+    \hlkwc{shrink}\hlstd{=}\hlnum{FALSE}\hlstd{)}
+
+\hlkwd{save}\hlstd{(Topic_clus,} \hlkwc{file}\hlstd{=}\hlstr{"../data/leng_topic_fit_classtpx_theta_fix_buettner.rda"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Topic_clus} \hlkwb{<-} \hlkwd{get}\hlstd{(}\hlkwd{load}\hlstd{(}\hlstr{"../data/leng_topic_fit_classtpx_theta_fix_buettner.rda"}\hlstd{))}
+\hlstd{omega} \hlkwb{<-} \hlstd{Topic_clus}\hlopt{$}\hlstd{omega;}
+
+\hlstd{leng_cell_state_human} \hlkwb{<-} \hlkwd{paste0}\hlstd{(}\hlstr{"human"}\hlstd{,} \hlstr{"_"}\hlstd{, leng_cell_state);}
+\hlstd{buettner_cell_state_mouse} \hlkwb{<-} \hlkwd{paste0}\hlstd{(}\hlstr{"mouse"}\hlstd{,}\hlstr{"_"}\hlstd{, buettner_cell_state);}
+
+\hlstd{annotation} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}
+  \hlkwc{sample_id} \hlstd{=} \hlkwd{paste0}\hlstd{(}\hlstr{"X"}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{1}\hlopt{:}\hlkwd{NROW}\hlstd{(omega))),}
+  \hlkwc{tissue_label} \hlstd{=} \hlkwd{factor}\hlstd{(}\hlkwd{c}\hlstd{(}\hlkwd{as.character}\hlstd{(buettner_cell_state_mouse),}
+                          \hlkwd{as.character}\hlstd{(leng_cell_state_human)),}
+                        \hlkwc{levels} \hlstd{=} \hlkwd{c}\hlstd{(}\hlstr{"mouse_G1"}\hlstd{,} \hlstr{"mouse_S"}\hlstd{,} \hlstr{"mouse_G2M"}\hlstd{,}
+                                        \hlstr{"human_G1"}\hlstd{,}\hlstr{"human_S"}\hlstd{,}
+                                         \hlstr{"human_G2"}\hlstd{,} \hlstr{"human_H1"}\hlstd{) ) )}
+
+
+\hlkwd{rownames}\hlstd{(omega)} \hlkwb{<-} \hlstd{annotation}\hlopt{$}\hlstd{sample_id;}
+
+
+\hlstd{CountClust}\hlopt{::}\hlkwd{StructureGGplot}\hlstd{(}\hlkwc{omega} \hlstd{= omega,}
+                \hlkwc{annotation} \hlstd{= annotation,}
+                \hlkwc{palette} \hlstd{= RColorBrewer}\hlopt{::}\hlkwd{brewer.pal}\hlstd{(}\hlnum{8}\hlstd{,} \hlstr{"Accent"}\hlstd{),}
+                \hlkwc{yaxis_label} \hlstd{=} \hlstr{"Cell cycle phase"}\hlstd{,}
+                \hlkwc{order_sample} \hlstd{=} \hlnum{TRUE}\hlstd{,}
+                \hlkwc{axis_tick} \hlstd{=} \hlkwd{list}\hlstd{(}\hlkwc{axis_ticks_length} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_y} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_ticks_lwd_x} \hlstd{=} \hlnum{.1}\hlstd{,}
+                                 \hlkwc{axis_label_size} \hlstd{=} \hlnum{7}\hlstd{,}
+                                 \hlkwc{axis_label_face} \hlstd{=} \hlstr{"bold"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\includegraphics[width=3 in,height=5 in]{figure/structure_ortholog_classtpx_theta_fix_3-1} 
+
+\end{knitrout}
+
+The above analysis (especially for the \begin{verb} theta.fix \end{verb} approach) shows that the cluster patterns obtained from cell cycle phases of mouse does not quite explain the patterns in the human data. One reason could be because we have pooled all the ortholog genes in this analysis
+and not just the cell-cycle related genes. It could also mean the orthologs of cell-cycle genes for mouse may not be cell-cycle related genes for humans.
+
+\section{Discussion}
+
+\begin{itemize}
+
+\item Since the number of features (genes) is usually way larger than the number of samples in RNA-seq data, it is important to protect the analysis from noisy genes which are not informative biologically but incorporate a lot of variation that can compromise the results. We use the adaptive shrinkage method (check Methods and Materials) through \begin{verb} shrink=TRUE \end{verb} to effectively reweigh the variables based on their within-class variation. The shrinkage method adopted may be improved by using FASH due to Mengyin Lu \url{https://github.com/mengyin/ashlar-fash}. Her model shrinks the F-statistics derived from the following linear model (which may be applied on voom transformed data)
+
+\begin{equation}
+Y_{ng}=\mu_{g}+\beta_{cl(n),g}+e_{ng} \hspace{1 cm} \beta_{cl(n),g} \sim N(0, \sigma^2) \hspace{1 cm} e_{ng} \sim N(0, s^2)
+\end{equation}
+
+However I am not sure how I can go from shrunk F-statistics in this model to shrunk estimates 
+of $\beta$ values, which I think is what I may need ultimately to obtain refined estimates of $\theta$.
+
+\item We may want to indicate in the Structure plot visualization, which samples have known class labels and what that class label is, compared to the ones for which we have no information about class labels. This would be particularly handy in case of \begin{verb} theta.fix() \end{verb} or \begin{verb} theta.prior \end{verb} models where it is not clear just from viewing the Structure plot, which of the samples have known cluster memberships.
+
+\item So far the attempt has been to take data from multiple experiments across labs and then check how far the knowledge of patterns from experiment in one lab can explain the patterns in the other. But there seems to be differences probably resulting from lab effects or batch or plate effects (cases in point: Buettner + Scialdone 2015 data analysis, Deng et al 2014 + Blakeley et al 2015 data analysis).
+
+\item For additional simulated data and  real data applications of the \classtpx{} package, please check \textit{Cell classification using classtpx} section in \url{http://jhsiao999.github.io/singleCell-method/} and for codes and source files, please check: \url{https://github.com/kkdey/classtpx}.
+
+\end{itemize}
+
+
+\section{Session Info}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{sessionInfo}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+## R version 3.2.4 (2016-03-10)
+## Platform: x86_64-apple-darwin13.4.0 (64-bit)
+## Running under: OS X 10.10.5 (Yosemite)
+## 
+## locale:
+## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+## 
+## attached base packages:
+## [1] parallel  stats     graphics  grDevices utils     datasets  methods  
+## [8] base     
+## 
+## other attached packages:
+##  [1] biomaRt_2.26.1                            
+##  [2] singleCellRNASeqMouseBuettnerESC_0.99.0   
+##  [3] bulkRNASeqMouseScialdoneESC_0.99.0        
+##  [4] singleCellRNASeqMouseScialdoneLiver_0.99.0
+##  [5] singleCellRNASeqMouseTreutleinLung_0.99.0 
+##  [6] singleCellRNASeqHumanLengESC_0.99.0       
+##  [7] Biobase_2.30.0                            
+##  [8] BiocGenerics_0.16.1                       
+##  [9] classtpx_0.0.1                            
+## [10] slam_0.1-32                               
+## [11] knitr_1.12.3                              
+## 
+## loaded via a namespace (and not attached):
+##  [1] Rcpp_0.12.3          formatR_1.2.1        RColorBrewer_1.1-2  
+##  [4] plyr_1.8.3           highr_0.5.1          bitops_1.0-6        
+##  [7] tools_3.2.4          digest_0.6.9         RSQLite_1.0.0       
+## [10] evaluate_0.8         gtable_0.2.0         nlme_3.1-125        
+## [13] lattice_0.20-33      mgcv_1.8-12          Matrix_1.2-4        
+## [16] DBI_0.3.1            stringr_1.0.0        cluster_2.0.3       
+## [19] IRanges_2.4.6        S4Vectors_0.8.7      gtools_3.5.0        
+## [22] CountClust_0.99.3    stats4_3.2.4         grid_3.2.4          
+## [25] nnet_7.3-12          cowplot_0.6.1        maptpx_1.9-2        
+## [28] flexmix_2.3-13       AnnotationDbi_1.32.3 XML_3.98-1.3        
+## [31] limma_3.26.8         ggplot2_2.1.0        reshape2_1.4.1      
+## [34] magrittr_1.5         scales_0.4.0         modeltools_0.2-21   
+## [37] MASS_7.3-45          BiocStyle_1.8.0      picante_1.6-2       
+## [40] permute_0.9-0        colorspace_1.2-6     ape_3.4             
+## [43] labeling_0.3         stringi_1.0-1        RCurl_1.95-4.7      
+## [46] munsell_0.4.3        vegan_2.3-4
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\end{document}
