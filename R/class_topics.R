@@ -43,7 +43,7 @@ class_topics <- function(counts,
     omega_known=NULL;
   }
   
-  if(method=="theta.fix" || method=="theta.prior"){
+  if(method != "no.fix"){
     theta_known <- thetaSelect(counts, known_samples, class_labs, shrink=shrink);
   }
  
@@ -59,14 +59,14 @@ class_topics <- function(counts,
   ## check the list of candidate K values
   
   ## initialize
-  if(method=="omega.fix"){
-  unknown_samples <- setdiff(1:nrow(X), known_samples);
-  initopics <- class.tpxinit(X[unknown_samples[1:min(ceiling(length(unknown_samples)*.05),100)],], 
-                             K1=K, known_samples = NULL, omega_known=NULL, 
-                             initopics, K_classes=K_classes, method="no.fix", shape, verb)
-  }
+#  if(method=="omega.fix"){
+#  unknown_samples <- setdiff(1:nrow(X), known_samples);
+#  initopics <- class.tpxinit(X[unknown_samples[1:min(ceiling(length(unknown_samples)*.05),100)],], 
+#                             K1=K, known_samples = NULL, omega_known=NULL, 
+#                             initopics, K_classes=K_classes, method="no.fix", shape, verb)
+#  }
   
-  if(method=="theta.fix" || method=="theta.prior"){
+  if(method != "no.fix"){
     if(K_classes < K){
     initopics1 <- theta_known
     initopics2 <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], 
