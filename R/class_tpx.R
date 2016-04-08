@@ -111,11 +111,11 @@ class.tpxinit <- function(X,
   if(is.matrix(initheta)){
     if(ncol(initheta)!=K1){ stop("mis-match between initheta and K.") }
     if(prod(initheta>0) != 1){ stop("use probs > 0 for initheta.") }
-    return(maptpx::normalize(initheta, byrow=FALSE)) }
+    return(class.normalizetpx(initheta, byrow=FALSE)) }
 
   if(is.matrix(alpha)){
     if(nrow(alpha)!=ncol(X) || ncol(alpha)!=K1){ stop("bad matrix alpha dimensions; check your K") }
-    return(maptpx::normalize(alpha, byrow=FALSE)) }
+    return(class.normalizetpx(alpha, byrow=FALSE)) }
 
   if(is.null(initheta)){ ilength <- K1-1 } else{ ilength <- initheta[1] }
   if(ilength < 1){ ilength <- 1 }
@@ -355,13 +355,13 @@ class.tpxEM <- function(X, m, theta, omega, alpha, admix, grp)
              Zhat <- .C("Rzhat", n=as.integer(n), p=as.integer(p), K=as.integer(K), N=as.integer(nrow(Xhat)),
                          Xhat=as.double(Xhat), doc=as.integer(X$i-1), wrd=as.integer(X$j-1),
                         zj = as.double(rep(0,K*p)), zi = as.double(rep(0,K*n)), PACKAGE="classtpx")
-             theta <- maptpx::normalize(matrix(Zhat$zj+alpha, ncol=K), byrow=FALSE)
-            # omega <- maptpx::normalize(matrix(Zhat$zi+1/K, ncol=K)) 
+             theta <- class.normalizetpx(matrix(Zhat$zj+alpha, ncol=K), byrow=FALSE)
+            # omega <- class.normalizetpx(matrix(Zhat$zi+1/K, ncol=K)) 
              } else{
     qhat <- class.tpxMixQ(X, omega, theta, grp, qhat=TRUE)$qhat
     ## EM update
-    theta <- maptpx::normalize(tcrossprod_simple_triplet_matrix( t(X), t(qhat) ) + alpha, byrow=FALSE)
-    #omega <- maptpx::normalize(matrix(apply(qhat*m,2, function(x) tapply(x,grp,sum)), ncol=K)+1/K )  
+    theta <- class.normalizetpx(tcrossprod_simple_triplet_matrix( t(X), t(qhat) ) + alpha, byrow=FALSE)
+    #omega <- class.normalizetpx(matrix(apply(qhat*m,2, function(x) tapply(x,grp,sum)), ncol=K)+1/K )  
     }
     
   return(list(theta=theta, omega=omega)) }
@@ -374,8 +374,8 @@ class.tpxQN <- function(move, Y, X, alpha, verb, admix, grp, doqn)
                 alpha=alpha, admix=admix, grp=grp) 
   move$omega[move$omega<=0] <- 1e-20;
   move$theta[move$theta<=0] <- 1e-20;
-  move$omega <- maptpx::normalize(move$omega);
-  move$theta <- maptpx::normalize(move$theta, byrow=FALSE);
+  move$omega <- class.normalizetpx(move$omega);
+  move$theta <- class.normalizetpx(move$theta, byrow=FALSE);
   
   if(doqn < 0){ return(list(move=move, L=L, Y=Y)) }
 
@@ -522,7 +522,7 @@ class.tpxThetaStart <- function(X, theta, omega, K)
     Kpast <- ncol(theta)
     Kdiff <- K-Kpast
     if(Kpast != ncol(omega) || Kpast >= K){ stop("bad K in class.tpxThetaStart") }
-    initheta <- maptpx::normalize(Kpast*theta+rowMeans(theta), byrow=FALSE)
+    initheta <- class.normalizetpx(Kpast*theta+rowMeans(theta), byrow=FALSE)
     n <- nrow(X)
     ki <- matrix(1:(n-n%%Kdiff), ncol=Kdiff)
     for(i in 1:Kdiff){ initheta <- cbind(initheta, (col_sums(X[ki[,i],])+1/ncol(X))/(sum(X[ki[,i],])+1)) }
@@ -535,7 +535,7 @@ class.tpxOmegaStart <- function(X, theta)
     omega <- try(tcrossprod_simple_triplet_matrix(X, solve(t(theta)%*%theta)%*%t(theta)), silent=TRUE )
     if(inherits(omega,"try-error")){ return( matrix( 1/ncol(theta), nrow=nrow(X), ncol=ncol(theta) ) ) }
     omega[omega <= 0] <- .5
-    return( maptpx::normalize(omega, byrow=TRUE) )
+    return(class.normalizetpx(omega, byrow=TRUE) )
   }
 
 

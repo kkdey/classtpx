@@ -1,7 +1,7 @@
 ## Tools for manipulation of text count matrices ##
 
 ## converting count to frequency matrix
-normalize <- function(x, byrow=TRUE){
+class.normalizetpx <- function(x, byrow=TRUE){
     if(byrow){ s <- slam::row_sums(x)
                s[s==0] <- 1
                return( x/s ) }
