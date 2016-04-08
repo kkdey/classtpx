@@ -2,7 +2,7 @@ useDynLib(classtpx)
 import(slam)
 
 export(stm_tfidf,
-       normalize,
+       class.normalizetpx,
        rdir,
        class_topics,
        predict.class_topics,
