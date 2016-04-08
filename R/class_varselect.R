@@ -26,7 +26,7 @@ thetaSelect <- function(counts, known_samples, class_labs, shrink=TRUE)
       return(FeatureSummary_class[[l]]$mean_element)
     }))
     
-    theta_class <- maptpx::normalize(mean_class+1e-20, byrow=FALSE)
+    theta_class <- class.normalizetpx(mean_class+1e-20, byrow=FALSE)
     return(theta_class)
   }
   
@@ -48,12 +48,12 @@ thetaSelect <- function(counts, known_samples, class_labs, shrink=TRUE)
                                               if(length(which(class_labs==l))==1){
                                                 return(beta_class[,l])
                                               }else{
-                                              return(suppressWarnings(ashr::ash(beta_class[,l], sebeta_class[,l], 
-                                                                                mixcompdist="normal")$PosteriorMean))
+                                                return(suppressWarnings(ashr::ash(beta_class[,l], sebeta_class[,l], 
+                                                                                  mixcompdist="normal")$PosteriorMean))
                                               }
-                                              }))
+                                              }));
     ash_mean_class <- ash_beta_class + mean_features;
-    ash_theta_class <- maptpx::normalize(ash_mean_class+1e-20, byrow=FALSE)
+    ash_theta_class <- class.normalizetpx(ash_mean_class+1e-20, byrow=FALSE)
     return(ash_theta_class)
   }
 }
