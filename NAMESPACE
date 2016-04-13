@@ -9,7 +9,8 @@ export(stm_tfidf,
        class_topicVar,
        expit,
        logit,
-       thetaSelect
+       thetaSelect,
+       class.scallio
        )
 
 S3method(plot,class_topics)

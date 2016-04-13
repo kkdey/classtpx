@@ -4,22 +4,22 @@
 ## models
 
 
-thetaSelect <- function(counts, known_samples, class_labs, shrink=TRUE)
+thetaSelect <- function(counts, known_samples, class_labs, shrink=TRUE, shrink.method=c(1,2))
 {
   counts_class <- counts[known_samples,];
-  mean_features <- apply(counts_class, 2, mean);
-  FeatureSummary_class <- parallel::mclapply(1:dim(counts_class)[2], 
-                                             function(l) {
-                                               sd_element <- tapply(counts_class[,l], class_labs, sd);
-                                               mean_element <- tapply(counts_class[,l], class_labs, mean);
-                                               beta_element <- mean_element - mean_features[l];
-                                               n.element <- as.numeric(table(class_labs));
-                                               sebeta_element <- sd_element/sqrt(n.element);
-                                               ll <- list("mean_element"=mean_element, "sd_element"=sd_element, "beta_element"=beta_element, "sebeta_element"=sebeta_element);
-                                               return(ll)
-                                             })
-  
   if(!shrink){
+    
+    mean_features <- apply(counts_class, 2, mean);
+    FeatureSummary_class <- parallel::mclapply(1:dim(counts_class)[2], 
+                                               function(l) {
+                                                 sd_element <- tapply(counts_class[,l], class_labs, sd);
+                                                 mean_element <- tapply(counts_class[,l], class_labs, mean);
+                                                 beta_element <- mean_element - mean_features[l];
+                                                 n.element <- as.numeric(table(class_labs));
+                                                 sebeta_element <- sd_element/sqrt(n.element);
+                                                 ll <- list("mean_element"=mean_element, "sd_element"=sd_element, "beta_element"=beta_element, "sebeta_element"=sebeta_element);
+                                                 return(ll)
+                                               })
     
     mean_class <- do.call(rbind, lapply(1:dim(counts_class)[2], function(l)
     {
@@ -30,7 +30,19 @@ thetaSelect <- function(counts, known_samples, class_labs, shrink=TRUE)
     return(theta_class)
   }
   
-  if(shrink){
+  if(shrink & shrink.method==2){
+    
+    mean_features <- apply(counts_class, 2, mean);
+    FeatureSummary_class <- parallel::mclapply(1:dim(counts_class)[2], 
+                                               function(l) {
+                                                 sd_element <- tapply(counts_class[,l], class_labs, sd);
+                                                 mean_element <- tapply(counts_class[,l], class_labs, mean);
+                                                 beta_element <- mean_element - mean_features[l];
+                                                 n.element <- as.numeric(table(class_labs));
+                                                 sebeta_element <- sd_element/sqrt(n.element);
+                                                 ll <- list("mean_element"=mean_element, "sd_element"=sd_element, "beta_element"=beta_element, "sebeta_element"=sebeta_element);
+                                                 return(ll)
+                                               })
     
     sebeta_class <- do.call(rbind, lapply(1:dim(counts_class)[2], function(l)
     {
@@ -55,5 +67,120 @@ thetaSelect <- function(counts, known_samples, class_labs, shrink=TRUE)
     ash_mean_class <- ash_beta_class + mean_features;
     ash_theta_class <- class.normalizetpx(ash_mean_class+1e-20, byrow=FALSE)
     return(ash_theta_class)
+  }
+  
+  if(shrink & shrink.method==1){
+    voom_class <- limma::voom(counts_class)$E;
+    limma.obj <- limma::lmFit(t(voom_class), model.matrix(~as.factor(class_labs)-1))
+    mean_genes_limma <- apply(limma.obj$coefficients, 1, mean)
+    beta_class <- limma.obj$coefficients - mean_genes_limma;
+    
+    sebeta_class <- do.call(rbind, lapply(1:dim(voom_class)[2], function(l)
+    {
+      sd_element <- tapply(voom_class[,l], class_labs, sd);
+      n.element <- as.numeric(table(class_labs));
+      return(sd_element/sqrt(n.element))
+    }))
+    
+    ash_beta_class <- do.call(cbind, lapply(unique(class_labs), 
+                                            function(l) 
+                                            {
+                                              if(length(which(class_labs==l))==1){
+                                                return(beta_class[,l])
+                                              }else{
+                                                return(suppressWarnings(ashr::ash(beta_class[,l], sebeta_class[,l], 
+                                                                                  mixcompdist="normal")$PosteriorMean))
+                                              }
+                                            }));
+    
+    voom_shrunk_mean <- mean_genes_limma + ash_beta_class;
+    voom_shrunk_matrix <- matrix(0, dim(counts_class)[1], dim(counts_class)[2])
+    
+    for(i in 1:length(unique(class_labs))){
+      voom_shrunk_matrix[which(class_labs==unique(class_labs)[i]),] <- rep.row(as.vector(voom_shrunk_mean[,i]), length(which(class_labs==unique(class_labs)[i])));
+    }
+    lib_size <- rowSums(counts_class);
+    
+    counts_shrunk_matrix <- (2^{voom_shrunk_matrix - 6*log(10, base=2)})*(rep.col(lib_size+1, dim(voom_shrunk_matrix)[2])) -0.5
+    counts_shrunk_matrix[counts_shrunk_matrix < 0]=1e-08;
+    
+    mean_counts_shrunk_class <- do.call(rbind, lapply(1:dim(counts_shrunk_matrix)[2], function(l)
+    {
+      mean_element <- tapply(counts_shrunk_matrix[,l], class_labs, mean);
+      return(mean_element)
+    }))
+    
+    ash_theta_class <- class.scallio(mean_counts_shrunk_class)$theta_class;
+    return(ash_theta_class)
+  }
+}
+
+rep.row<-function(x,n){
+  matrix(rep(x,each=n),nrow=n)
+}
+
+rep.col<-function(x,n){
+  matrix(rep(x,each=n), ncol=n, byrow=TRUE)
+}
+
+class.scallio <- function(mean_counts_class){
+  theta_init <- class.normalizetpx(mean_counts_class, byrow=FALSE);
+  counter <- 0
+  flag <- 0
+  l <- 1
+  while(l <= dim(mean_counts_class)[2]){
+      scale_clus <- mean_counts_class[,-l]/mean_counts_class[,l];
+      scale_clus[scale_clus <1e-04] = 1e-04
+      scale_clus[scale_clus >1e+04] = 1e+04
+      
+      A <- rbind(as.matrix(t(scale_clus)), rep(1,dim(as.matrix(scale_clus))[1]));
+      B <- rep(1,nrow(A));
+      G <- diag(1, ncol(A));
+      H <- rep(1e-06,ncol(A));
+      
+      solve.obj <- limSolve::lsei(A = A, B = B, G = G, H = H, verbose = FALSE)
+      
+      ash_theta_class <- matrix(0, length(scale_clus), nrow(A));
+      ash_theta_class[,-(l)] <- A[-(nrow(A)),]*solve.obj$X;
+      ash_theta_class[,l] <- solve.obj$X;
+      
+      scale_est <- ash_theta_class[,-l]/ash_theta_class[,l]
+      na_indices <- which(is.na(rowSums(as.matrix(scale_est))));
+      
+      if(length(na_indices)==0){
+        ll <- list("theta_class"=class.normalizetpx(ash_theta_class+1e-20, byrow=FALSE), "counter"=counter)
+        return(ll)
+      }
+      
+      if(l==1 & length(na_indices) > 0){
+        temp <- ash_theta_class;
+        counter <- counter + 1;
+      }
+      
+      if(l !=1 & length(na_indices) > 0){
+        scale_prev <- temp[,-l]/temp[,l];
+        index1 <- which(is.na(rowSums(as.matrix(scale_prev))));
+        scale_curr <- ash_theta_class[-l]/ash_theta_class[,l];
+        index2 <- which(is.na(rowSums(as.matrix(scale_curr))));
+        if(length(setdiff(index2, index1))==0){
+        ash_theta_class[setdiff(index2, index1),] <- temp[setdiff(index2, index1),];
+        }
+        scale_est <- ash_theta_class[,-l]/ash_theta_class[,l]
+        na_indices <- which(is.na(rowSums(as.matrix(scale_est))));
+        if(length(na_indices)==0){
+          ll <- list("theta_class"=class.normalizetpx(ash_theta_class+1e-20, byrow=FALSE), "counter"=counter)
+          return(ll)
+        }else{
+        temp <- ash_theta_class;
+        counter <- counter +1;
+        }}
+  }
+  
+  if(l==dim(mean_counts_class)[2]){
+    scale_est <- ash_theta_class[,-l]/ash_theta_class[,l];
+    na_indices <- which(is.na(rowSums(scale_est)));
+    ash_theta_class[na_indices,] <- theta_init[na_indices,]
+    ll <- list("theta_class"=class.normalizetpx(ash_theta_class+1e-20, byrow=FALSE), "counter"=counter)
+    return(ll)
   }
 }
