@@ -110,10 +110,28 @@ thetaSelect <- function(counts, known_samples, class_labs, shrink=TRUE, shrink.m
       return(mean_element)
     }))
     
-    ash_theta_class <- class.scallio(mean_counts_shrunk_class)$theta_class;
+    chunks <- chunk(1:nrow(mean_counts_shrunk_class), 200);
+    
+    ash_theta_class_list <- parallel::mclapply(1:length(chunks),
+                                function(l)
+                                {
+                                  out <- class.scallio(mean_counts_shrunk_class[chunks[[l]],])$theta_class;
+                                  return(out)
+                                }, mc.cores=parallel::detectCores());
+    
+    ash_theta_class <- matrix(0, nrow(mean_counts_shrunk_class), ncol(mean_counts_shrunk_class));
+    
+    for(l in 1:length(chunks)){
+      ash_theta_class[chunks[[l]],] <- ash_theta_class_list[[l]]
+    }
+    
+    ash_theta_class <- class.normalizetpx(ash_theta_class, byrow=FALSE);
     return(ash_theta_class)
   }
 }
+
+
+chunk <- function(x,n) split(x, factor(sort(rank(x)%%n)))
 
 rep.row<-function(x,n){
   matrix(rep(x,each=n),nrow=n)
