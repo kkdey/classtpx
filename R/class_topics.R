@@ -45,7 +45,12 @@ class_topics <- function(counts,
   }
   
   if(method != "no.fix"){
-    theta_known <- thetaSelect(counts, known_samples, class_labs, shrink=shrink, shrink.method = shrink.method);
+    theta_known <- thetaSelect(counts, 
+                               known_samples, 
+                               class_labs, 
+                               shrink=shrink, 
+                               shrink.method = shrink.method,
+                               nchunks=nchunks);
   }
  
   X <- CheckCounts(counts)

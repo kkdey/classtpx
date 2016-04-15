@@ -7,4 +7,3 @@ src/*.dll
 packrat/lib*/
 data/
 vignettes/utilities/*
-.RDataTmp
