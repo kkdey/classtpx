@@ -73,26 +73,26 @@ thetaSelect <- function(counts,
     
     scale_clus <- ash_mean_class[,2]/ash_mean_class[,1];
     
-    chunks <- chunk(1:nrow(ash_mean_class), 20);
+#    chunks <- chunk(1:nrow(ash_mean_class), 20);
     
-    ash_theta_class_list <- parallel::mclapply(1:length(chunks),
-                                               function(l)
-                                               {
-                                                 out <- class.scallio(ash_mean_class[chunks[[l]],])$theta_class;
-                                                 return(out)
-                                               }, mc.cores=parallel::detectCores());
+#    ash_theta_class_list <- parallel::mclapply(1:length(chunks),
+#                                               function(l)
+#                                               {
+#                                                 out <- class.scallio(ash_mean_class[chunks[[l]],])$theta_class;
+#                                                 return(out)
+#                                               }, mc.cores=parallel::detectCores());
     
-    ash_theta_class <- matrix(0, nrow(ash_mean_class), ncol(ash_mean_class));
+#    ash_theta_class <- matrix(0, nrow(ash_mean_class), ncol(ash_mean_class));
     
      
     
-    for(l in 1:length(chunks)){
-      ash_theta_class[chunks[[l]],] <- as.matrix(ash_theta_class_list[[l]])
-    }
+#    for(l in 1:length(chunks)){
+#      ash_theta_class[chunks[[l]],] <- as.matrix(ash_theta_class_list[[l]])
+#    }
     
-    scale_clus_scallio <- ash_theta_class[,2]/ash_theta_class[,1]
-      ash_theta_class <- class.normalizetpx(ash_theta_class, byrow=FALSE)
-   #   ash_theta_class <- class.normalizetpx(ash_mean_class+1e-20, byrow=FALSE)
+#    scale_clus_scallio <- ash_theta_class[,2]/ash_theta_class[,1]
+#      ash_theta_class <- class.normalizetpx(ash_theta_class, byrow=FALSE)
+      ash_theta_class <- class.normalizetpx(ash_mean_class+1e-20, byrow=FALSE)
     return(ash_theta_class)
   }
   

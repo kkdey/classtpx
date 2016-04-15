@@ -1,10 +1,11 @@
 .Rproj.user
 .Rhistory
 .RData
+.RDataTmp
 src/*.o
 src/*.so
 src/*.dll
 packrat/lib*/
 data/
 vignettes/utilities/*
-.RDataTmp
+
