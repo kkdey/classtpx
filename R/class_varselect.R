@@ -98,10 +98,26 @@ thetaSelect <- function(counts,
   
   if(shrink & shrink.method==1){
     voom_class <- voom2(counts_class);
-    limma.obj <- limma::lmFit(t(voom_class), model.matrix(~as.factor(class_labs)))
-    mean_genes_limma <- apply(limma.obj$coefficients, 1, mean)
-    beta_class <- as.matrix(limma.obj$coefficients[,-1]);
-    sebeta_class <- limma.obj$sigma*(as.matrix(limma.obj$stdev.unscaled[,-1]));
+    model_mat <- model.matrix(~as.factor(class_labs)-1) 
+    
+    ash_beta_class <- matrix(0, dim(voom_class)[2], dim(model_mat)[2])
+    voom_shrunk_class <- matrix(0, dim(voom_class)[2], dim(model_mat)[2])
+    
+    #beta_class <- matrix(0, dim(voom_class)[2], dim(model_mat)[2])
+    
+    for(k in 1:dim(model_mat)[2]){
+         limma.obj <- limma::lmFit(t(voom_class), cbind(rep(1, length(class_labs)), model_mat[,k]))
+         mean_genes_limma <- apply(limma.obj$coefficients, 1, mean)
+         beta_class <- as.matrix(limma.obj$coefficients[,-1]);
+         sebeta_class <- limma.obj$sigma*(as.matrix(limma.obj$stdev.unscaled[,-1]));
+         if(length(which(class_labs==k))==1){
+           ash_beta_class[,k] <- beta_class;
+         }else{
+           ash_beta_class[,k] <- suppressWarnings(ashr::ash(beta_class, sebeta_class, 
+                                      mixcompdist="normal")$PosteriorMean)
+         }
+          voom_shrunk_class[,k] <- limma.obj$coefficients[,1] + ash_beta_class[,k];
+    }
     
     
     
@@ -113,26 +129,24 @@ thetaSelect <- function(counts,
     #    }))
     
     
-    ash_beta_class <- do.call(cbind, lapply(1:length(unique(class_labs)[-1]), 
-                                            function(l) 
-                                            {
-                                              if(length(which(class_labs==(l+1)))==1){
-                                                return(beta_class[,l])
-                                              }else{
-                                                return(suppressWarnings(ashr::ash(beta_class[,l], sebeta_class[,l], 
-                                                                                  mixcompdist="normal")$PosteriorMean))
-                                              }
-                                            }));
-    
-    beta_class[1:10,]
-    ash_beta_class[1:10,]
-    
-    voom_shrunk_mean <- limma.obj$coefficients[,1] + cbind.data.frame(rep(0,dim(ash_beta_class)[1]), ash_beta_class);
+#     ash_beta_class <- do.call(cbind, lapply(1:length(unique(class_labs)[-1]), 
+#                                             function(l) 
+#                                             {
+#                                               if(length(which(class_labs==(l+1)))==1){
+#                                                 return(beta_class[,l])
+#                                               }else{
+#                                                 return(suppressWarnings(ashr::ash(beta_class[,l], sebeta_class[,l], 
+#                                                                                   mixcompdist="normal")$PosteriorMean))
+#                                               }
+#                                             }));
+#     
+  
+#    voom_shrunk_mean <- limma.obj$coefficients[,1] + cbind.data.frame(rep(0,dim(ash_beta_class)[1]), ash_beta_class);
     
     voom_shrunk_matrix <- matrix(0, dim(counts_class)[1], dim(counts_class)[2])
     
     for(i in 1:length(unique(class_labs))){
-      voom_shrunk_matrix[which(class_labs==unique(class_labs)[i]),] <- rep.row(as.vector(voom_shrunk_mean[,i]), length(which(class_labs==unique(class_labs)[i])));
+      voom_shrunk_matrix[which(class_labs==unique(class_labs)[i]),] <- rep.row(as.vector(voom_shrunk_class[,i]), length(which(class_labs==unique(class_labs)[i])));
     }
     lib_size <- rowSums(counts_class);
     
@@ -144,6 +158,13 @@ thetaSelect <- function(counts,
       mean_element <- tapply(counts_shrunk_matrix[,l], class_labs, mean);
       return(mean_element)
     }))
+    
+    ash_theta_class <- class.normalizetpx(mean_counts_shrunk_class+1e-20, byrow=FALSE);
+    return(ash_theta_class)
+    
+  }
+}
+  
     
 #    chunks <- chunk(1:nrow(mean_counts_shrunk_class), 200);
     
@@ -160,10 +181,9 @@ thetaSelect <- function(counts,
 #      ash_theta_class[chunks[[l]],] <- as.matrix(ash_theta_class_list[[l]])
 #     }
     
-    ash_theta_class <- class.normalizetpx(mean_counts_shrunk_class+1e-20, byrow=FALSE);
-    return(ash_theta_class)
-  }
-}
+#    
+# }
+#}
 
 
 chunk <- function(x,n) split(x, factor(sort(rank(x)%%n)))
