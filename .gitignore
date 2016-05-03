@@ -7,5 +7,6 @@ src/*.so
 src/*.dll
 packrat/lib*/
 data/
-vignettes/utilities/*
+vignettes/*
+packrat/*
 
