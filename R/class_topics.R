@@ -8,6 +8,7 @@ class_topics <- function(counts,
                          method=c("omega.fix", "theta.fix", "theta.prior", "no.fix"),
                          shrink=TRUE,
                          shrink.method=c(1,2),
+                         mash_user=NULL,
                          shape=NULL, 
                          initopics=NULL, 
                          tol=0.1, 
@@ -50,7 +51,8 @@ class_topics <- function(counts,
                                class_labs, 
                                shrink=shrink, 
                                shrink.method = shrink.method,
-                               nchunks=nchunks);
+                               nchunks=nchunks,
+                               mash_user=mash_user);
   }
  
   X <- CheckCounts(counts)

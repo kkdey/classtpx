@@ -10,7 +10,10 @@ export(stm_tfidf,
        expit,
        logit,
        thetaSelect,
-       class.scallio
+       class.scallio,
+       class.voom_generator,
+       class.nonmodel_clust,
+       class.model_clust
        )
 
 S3method(plot,class_topics)
