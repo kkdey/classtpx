@@ -111,8 +111,8 @@ thetaSelect <- function(counts,
     sebeta_class <- matrix(0, dim(voom_class)[2], dim(model_mat)[2])
     for(k in 1:dim(model_mat)[2]){
       model_mat_temp <- cbind(model_mat[,k]);
-      limma.obj <- limma::lmFit(t(voom_class_adj), model_mat_temp,
-                                weights=t(limma::voom(counts_class)$weights))
+      limma.obj <- limma::lmFit(t(voom_class_adj), design=matrix(model_mat_temp, nrow=dim(model_mat)[1]),
+                                weights=limma::voom(t(counts_class), design=matrix(model_mat_temp, nrow=dim(model_mat)[1]))$weights)
   #    limma.obj <- limma::eBayes(limma.obj)
    #   mean_genes_limma <- apply(limma.obj$coefficients, 1, mean)
       beta_class[,k] <- as.matrix(limma.obj$coefficients[,1]);

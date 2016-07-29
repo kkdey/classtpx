@@ -697,8 +697,8 @@ ortholog_buettner_human_ids <- orth.mouse.human[filter_indices,1];
 
 human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 mySymbols <- ortholog_buettner_human_ids; # mySymbols is a vector of MGI symbols.
-gene_list_human <- getBM( attributes=c("ensembl_gene_id", "hgnc_symbol") , filters=
-"ensembl_gene_id", values =mySymbols ,mart=human)
+gene_list_human <- getBM( attributes=c("ensembl_gene_id", "external_gene_name") , filters=
+"external_gene_name", values =c("ABCA1","ABCBB") ,mart=human)
 
 gene_names_human <- gene_list_human[,2];
 @ %def
