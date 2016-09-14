@@ -5,18 +5,20 @@ class_topics <- function(counts,
                          K, 
                          known_samples=NULL, 
                          class_labs=NULL, 
-                         method=c("omega.fix", "theta.fix", "theta.prior", "no.fix"),
+                         method=c("omega.fix", "theta.fix", "theta.prior","no.fix"),
+                         optional_theta=NULL,
                          shrink=TRUE,
                          shrink.method=c(1,2),
                          mash_user=NULL,
                          shape=NULL, 
-                         initopics=NULL, 
+                   #      initopics=NULL, 
                          tol=0.1, 
                          bf=FALSE, 
                          kill=2, 
                          ord=TRUE, verb=1, 
                          tmax=10000, wtol=10^(-4), 
                          qn=100, grp=NULL, admix=TRUE, 
+                         prior_omega = NULL,
                          nonzero=FALSE, dcut=-10)
   ## class.tpxselect defaults: tmax=10000, wtol=10^(-4), qn=100, grp=NULL, admix=TRUE, nonzero=FALSE, dcut=-10
 {
@@ -34,6 +36,10 @@ class_topics <- function(counts,
     K_classes <- 0
   }
   
+  if(is.null(prior_omega)){
+    prior_omega <- rep(1/K, K);
+  }
+  
   if(method=="omega.fix"){
     if(K_classes < K){
       omega_known <- cbind(model.matrix(lm(1:length(class_labs) ~ as.factor(class_labs)-1)),
@@ -46,13 +52,17 @@ class_topics <- function(counts,
   }
   
   if(method != "no.fix"){
+    if(is.null(optional_theta)){
     theta_known <- thetaSelect(counts, 
                                known_samples, 
                                class_labs, 
                                shrink=shrink, 
                                shrink.method = shrink.method,
                                nchunks=nchunks,
-                               mash_user=mash_user);
+                               mash_user=mash_user);}
+    else{
+      theta_known <- optional_theta;
+    }
   }
  
   X <- CheckCounts(counts)
@@ -77,10 +87,17 @@ class_topics <- function(counts,
   if(method != "no.fix"){
     if(K_classes < K){
     initopics1 <- theta_known
-    initopics2 <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),], 
-                                K1=K- K_classes, known_samples=NULL, omega_known=NULL,
-                                initopics, K_classes=2, method="no.fix", shape, verb)
-    initopics <- cbind(initopics1, initopics2[,order(apply(initopics2,2, var), decreasing=FALSE)[1:(K-K_classes)]])
+    K1 <- K - K_classes;
+    X1 <- X[1:min(ceiling(nrow(X)*.1),100),]
+#    initopics2 <- class.tpxinit(X1, K1=K1, initheta=NULL, 
+#                                  K_classes=2, 
+#                                  method="no.fix", 
+#                                 shape, verb)
+    initopics2 <- tpxinit(X1, initheta=NULL, K1=K1,
+                                shape, verb, init.adapt = FALSE)
+    initopics <- cbind(initopics1, 
+                       initopics2[,order(apply(initopics2,2, var), 
+                          decreasing=FALSE)[1:(K-K_classes)]])
     }else{
       initopics <- theta_known;
     }
@@ -88,14 +105,14 @@ class_topics <- function(counts,
   
   if(method=="no.fix"){
     initopics <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),],
-                               K1=K, known_samples=NULL, omega_known=NULL,
-                              initopics, K_classes = K_classes, method=method, shape, verb)
+                               K1=K, initheta=NULL, K_classes = K_classes, 
+                               method=method, shape, verb)
   }
   
   ## either search for marginal MAP K and return bayes factors, or just fit
   class.tpx <- class.tpxfit(X, known_samples, omega_known, initopics, 
                             K_classes = K_classes, alpha=shape, method=method, 
-                            tol, verb, admix, grp, tmax, wtol, qn)
+                            tol, verb, admix, prior_omega, grp, tmax, wtol, qn)
   
   #map.tpx <- maptpx::topics(counts, K=K, tol=tol)
  
