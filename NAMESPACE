@@ -1,20 +1,21 @@
 useDynLib(classtpx)
 import(slam)
+import(maptpx)
+
 
 export(stm_tfidf,
        class.normalizetpx,
-       rdir,
-       class_topics,
-       predict.class_topics,
-       class_topicVar,
-       expit,
-       logit,
-       thetaSelect,
-       class.scallio,
-       class.voom_generator,
-       class.nonmodel_clust,
-       class.model_clust
-       )
+        rdir,
+	      class_topics,
+		    predict.class_topics,
+			  class_topicVar,
+				expit,
+				logit,
+				thetaSelect,
+				class.scallio,
+				class.voom_generator,
+				class.nonmodel_clust,
+				class.model_clust)
 
 S3method(plot,class_topics)
 S3method(predict,class_topics)
