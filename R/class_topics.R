@@ -38,6 +38,8 @@ class_topics <- function(counts,
   
   if(is.null(prior_omega)){
     prior_omega <- rep(1/K, K);
+  }else{
+    prior_omega <- (prior_omega/sum(prior_omega))
   }
   
   if(method=="omega.fix"){
@@ -89,12 +91,24 @@ class_topics <- function(counts,
     initopics1 <- theta_known
     K1 <- K - K_classes;
     X1 <- X[1:min(ceiling(nrow(X)*.1),100),]
-#    initopics2 <- class.tpxinit(X1, K1=K1, initheta=NULL, 
-#                                  K_classes=2, 
-#                                  method="no.fix", 
-#                                 shape, verb)
-    initopics2 <- tpxinit(X1, initheta=NULL, K1=K1,
-                                shape, verb, init.adapt = FALSE)
+    if(K1==1){
+       initopics2 <- class.tpxinit(X1, K1=2, initheta=NULL, 
+                                  K_classes=K_classes, 
+                                  method="no.fix", 
+                                  shape, verb)
+    }else{
+       initopics2 <- class.tpxinit(X1, K1=K1, initheta=NULL, 
+                                  K_classes=K_classes, 
+                                  method="no.fix", 
+                                  shape, verb)
+    }
+#    if(K1==1){
+#         initopics2 <- tpxinit(X1, initheta=NULL, K1=2,
+#                                shape, verb, init.adapt = FALSE)
+#    }else{
+#         initopics2 <- tpxinit(X1, initheta=NULL, K1=K1,
+#                            shape, verb, init.adapt = FALSE)
+#    }
     initopics <- cbind(initopics1, 
                        initopics2[,order(apply(initopics2,2, var), 
                           decreasing=FALSE)[1:(K-K_classes)]])
@@ -109,6 +123,7 @@ class_topics <- function(counts,
                                method=method, shape, verb)
   }
   
+  cat("start the fit \n")
   ## either search for marginal MAP K and return bayes factors, or just fit
   class.tpx <- class.tpxfit(X, known_samples, omega_known, initopics, 
                             K_classes = K_classes, alpha=shape, method=method, 

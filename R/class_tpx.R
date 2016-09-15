@@ -597,7 +597,14 @@ class.tpxOmegaStart <- function(X, theta)
 
 ## fast computation of sparse P(X) for X>0
 class.tpxQ <- function(theta, omega, doc, wrd){
-
+  theta[theta==0] <- 1e-14;
+  theta[theta==1] <- 1 - 1e-14
+  omega[omega==0] <-  1e-14
+  omega[omega==1] <- 1 - 1e-14
+  
+  omega <- class.normalizetpx(omega, byrow = TRUE)
+  theta <- class.normalizetpx(theta, byrow = FALSE)
+  
   if(length(wrd)!=length(doc)){stop("index mis-match in class.tpxQ") }
   if(ncol(omega)!=ncol(theta)){stop("theta/omega mis-match in class.tpxQ") }
   
