@@ -11,7 +11,7 @@ class_topics <- function(counts,
                          shrink.method=c(1,2),
                          mash_user=NULL,
                          shape=NULL, 
-                   #      initopics=NULL, 
+                         initopics=NULL, 
                          tol=0.1, 
                          bf=FALSE, 
                          kill=2, 
@@ -91,24 +91,24 @@ class_topics <- function(counts,
     initopics1 <- theta_known
     K1 <- K - K_classes;
     X1 <- X[1:min(ceiling(nrow(X)*.1),100),]
-    if(K1==1){
-       initopics2 <- class.tpxinit(X1, K1=2, initheta=NULL, 
-                                  K_classes=K_classes, 
-                                  method="no.fix", 
-                                  shape, verb)
-    }else{
-       initopics2 <- class.tpxinit(X1, K1=K1, initheta=NULL, 
-                                  K_classes=K_classes, 
-                                  method="no.fix", 
-                                  shape, verb)
-    }
 #    if(K1==1){
-#         initopics2 <- tpxinit(X1, initheta=NULL, K1=2,
-#                                shape, verb, init.adapt = FALSE)
+#       initopics2 <- class.tpxinit(X1, K1=2, initheta=NULL, 
+#                                  K_classes=K_classes, 
+#                                  method="no.fix", 
+#                                  shape, verb)
 #    }else{
-#         initopics2 <- tpxinit(X1, initheta=NULL, K1=K1,
-#                            shape, verb, init.adapt = FALSE)
+#       initopics2 <- class.tpxinit(X1, K1=K1, initheta=NULL, 
+#                                  K_classes=K_classes, 
+#                                  method="no.fix", 
+#                                  shape, verb)
 #    }
+    if(K1==1){
+         initopics2 <- tpxinit(X1, initheta=NULL, K1=2,
+                                shape, verb, init.adapt = FALSE)
+    }else{
+         initopics2 <- tpxinit(X1, initheta=NULL, K1=K1,
+                            shape, verb, init.adapt = FALSE)
+    }
     initopics <- cbind(initopics1, 
                        initopics2[,order(apply(initopics2,2, var), 
                           decreasing=FALSE)[1:(K-K_classes)]])
@@ -118,9 +118,12 @@ class_topics <- function(counts,
   }
   
   if(method=="no.fix"){
-    initopics <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),],
-                               K1=K, initheta=NULL, K_classes = K_classes, 
-                               method=method, shape, verb)
+#    initopics <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),],
+#                               K1=K, initheta=NULL, K_classes = K_classes, 
+#                               method=method, shape, verb)
+    initopics2 <- tpxinit(X[1:min(ceiling(nrow(X)*.05),100)], 
+                          initheta=NULL, K1=K,
+                          shape, verb, init.adapt = FALSE)
   }
   
   cat("start the fit \n")
