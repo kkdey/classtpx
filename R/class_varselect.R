@@ -71,7 +71,7 @@ thetaSelect <- function(counts,
                                                 return(beta_class[,l])
                                               }else{
                                                 return(suppressWarnings(ashr::ash(beta_class[,l], sebeta_class[,l], 
-                                                                                  mixcompdist="normal")$PosteriorMean))
+                                                                                  mixcompdist="normal")$result$PosteriorMean))
                                               }
                                               }));
     ash_mean_class <- ash_beta_class + mean_features;
