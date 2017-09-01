@@ -23,12 +23,7 @@ thetaSelect <- function(counts,
     if(!robust){
       mean_features <- apply(counts_class, 2, mean);
     }else{
-      mean_features <- apply(counts_class, 2, function(x) {
-                                                if(max(abs(x)) > 0){
-                                                  return(median(x[x!=0]))
-                                                }else{
-                                                  return(0)
-                                                }})
+      mean_features <- apply(counts_class, 2, function(x) return(mean(x, trim = 0.1)))
     }
     
     FeatureSummary_class <- parallel::mclapply(1:dim(counts_class)[2],
@@ -37,12 +32,7 @@ thetaSelect <- function(counts,
                                                  if(!robust){
                                                    central_element <- tapply(counts_class[,l], class_labs, mean);
                                                  }else{
-                                                   central_element <- tapply(counts_class[,l], class_labs, function(x) {
-                                                     if(max(abs(x)) > 0){
-                                                       return(median(x[x!=0]))
-                                                     }else{
-                                                       return(0)
-                                                     }});
+                                                   central_element <- tapply(counts_class[,l], class_labs, function(x) return(mean(x, trim = 0.1)));
                                                  }
                                                  
                                                  beta_element <- central_element - mean_features[l];
