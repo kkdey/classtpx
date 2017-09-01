@@ -27,7 +27,7 @@ thetaSelect <- function(counts,
                                                 if(max(abs(x)) > 0){
                                                   return(median(x[x!=0]))
                                                 }else{
-                                                  return(1e-10)
+                                                  return(0)
                                                 }})
     }
     
@@ -41,7 +41,7 @@ thetaSelect <- function(counts,
                                                      if(max(abs(x)) > 0){
                                                        return(median(x[x!=0]))
                                                      }else{
-                                                       return(1e-10)
+                                                       return(0)
                                                      }});
                                                  }
                                                  
