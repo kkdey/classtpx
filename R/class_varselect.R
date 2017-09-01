@@ -10,6 +10,7 @@ thetaSelect <- function(counts,
                         shrink=TRUE,
                         shrink.method=c(1,2),
                         nchunks=20,
+                        robust = FALSE,
                         mash_user=NULL)
 {
   if(!is.null(mash_user)){
@@ -23,17 +24,22 @@ thetaSelect <- function(counts,
     FeatureSummary_class <- parallel::mclapply(1:dim(counts_class)[2],
                                                function(l) {
                                                  sd_element <- tapply(counts_class[,l], class_labs, sd);
-                                                 mean_element <- tapply(counts_class[,l], class_labs, mean);
-                                                 beta_element <- mean_element - mean_features[l];
+                                                 if(!robust){
+                                                   central_element <- tapply(counts_class[,l], class_labs, mean);
+                                                 }else{
+                                                   central_element <- tapply(counts_class[,l], class_labs, median);
+                                                 }
+                                                 
+                                                 beta_element <- central_element - mean_features[l];
                                                  n.element <- as.numeric(table(class_labs));
                                                  sebeta_element <- sd_element/sqrt(n.element);
-                                                 ll <- list("mean_element"=mean_element, "sd_element"=sd_element, "beta_element"=beta_element, "sebeta_element"=sebeta_element);
+                                                 ll <- list("central_element"=central_element, "sd_element"=sd_element, "beta_element"=beta_element, "sebeta_element"=sebeta_element);
                                                  return(ll)
                                                })
 
     mean_class <- do.call(rbind, lapply(1:dim(counts_class)[2], function(l)
     {
-      return(FeatureSummary_class[[l]]$mean_element)
+      return(FeatureSummary_class[[l]]$central_element)
     }))
 
     theta_class <- class.normalizetpx(mean_class+1e-20, byrow=FALSE)

@@ -1,6 +1,8 @@
-##### Estimation for Topic Models ######
+##################  Supervised Estimation of Topic Models   #################
 
 ## intended main function; provides defaults and selects K via marginal lhd
+
+
 class_topics <- function(counts, 
                          K, 
                          known_samples=NULL, 
@@ -18,7 +20,7 @@ class_topics <- function(counts,
                          ord=TRUE, verb=1, 
                          tmax=10000, wtol=10^(-4), 
                          qn=100, grp=NULL, admix=TRUE, 
-                         prior_omega = NULL,
+                         prior_omega = NULL, robust=FALSE,
                          nonzero=FALSE, dcut=-10)
   ## class.tpxselect defaults: tmax=10000, wtol=10^(-4), qn=100, grp=NULL, admix=TRUE, nonzero=FALSE, dcut=-10
 {
@@ -61,6 +63,7 @@ class_topics <- function(counts,
                                shrink=shrink, 
                                shrink.method = shrink.method,
                                nchunks=nchunks,
+                               robust = robust,
                                mash_user=mash_user);}
     else{
       theta_known <- optional_theta;
