@@ -20,7 +20,7 @@ class_topics <- function(counts,
                          ord=TRUE, verb=1, 
                          tmax=10000, wtol=10^(-4), 
                          qn=100, grp=NULL, admix=TRUE, 
-                         prior_omega = NULL, robust=FALSE,
+                         prior_omega = NULL, trim = 0,
                          nonzero=FALSE, dcut=-10)
   ## class.tpxselect defaults: tmax=10000, wtol=10^(-4), qn=100, grp=NULL, admix=TRUE, nonzero=FALSE, dcut=-10
 {
@@ -44,6 +44,14 @@ class_topics <- function(counts,
     prior_omega <- (prior_omega/sum(prior_omega))
   }
   
+  if(trim < 0){
+    trim <- 0
+    message("trim has to be between 0 and 0.5, so taking trim to be 0")
+  }else if (trim > 0.5){
+    trim <- 0.5
+    message("trim has to be between 0 and 0.5, so taking trim to be 0.5")
+  }
+  
   if(method=="omega.fix"){
     if(K_classes < K){
       omega_known <- cbind(model.matrix(lm(1:length(class_labs) ~ as.factor(class_labs)-1)),
@@ -63,7 +71,7 @@ class_topics <- function(counts,
                                shrink=shrink, 
                                shrink.method = shrink.method,
                                nchunks=nchunks,
-                               robust = robust,
+                               trim = trim,
                                mash_user=mash_user);}
     else{
       theta_known <- optional_theta;

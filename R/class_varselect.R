@@ -10,7 +10,7 @@ thetaSelect <- function(counts,
                         shrink=TRUE,
                         shrink.method=c(1,2),
                         nchunks=20,
-                        robust = FALSE,
+                        trim= 0,
                         mash_user=NULL)
 {
   if(!is.null(mash_user)){
@@ -20,21 +20,12 @@ thetaSelect <- function(counts,
   counts_class <- counts[known_samples,];
   if(!shrink){
 
-    if(!robust){
-      mean_features <- apply(counts_class, 2, mean);
-    }else{
-      mean_features <- apply(counts_class, 2, function(x) return(mean(x, trim = 0.1)))
-    }
+    mean_features <- apply(counts_class, 2, function(x) return(mean(x, trim = trim)));
     
     FeatureSummary_class <- parallel::mclapply(1:dim(counts_class)[2],
                                                function(l) {
                                                  sd_element <- tapply(counts_class[,l], class_labs, sd);
-                                                 if(!robust){
-                                                   central_element <- tapply(counts_class[,l], class_labs, mean);
-                                                 }else{
-                                                   central_element <- tapply(counts_class[,l], class_labs, function(x) return(mean(x, trim = 0.1)));
-                                                 }
-                                                 
+                                                 central_element <- tapply(counts_class[,l], class_labs, function(x) return(mean(x, trim = trim)));
                                                  beta_element <- central_element - mean_features[l];
                                                  n.element <- as.numeric(table(class_labs));
                                                  sebeta_element <- sd_element/sqrt(n.element);
