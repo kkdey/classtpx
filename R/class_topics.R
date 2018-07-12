@@ -33,7 +33,13 @@ class_topics <- function(counts,
   }
   
   if(method!="no.fix"){
-    K_classes <- length(unique(class_labs));
+    if(is.null(optional_theta) && !is.null(class_labs)){
+      K_classes <- length(unique(class_labs));
+    }else if (!is.null(optional_theta) && is.null(class_labs)){
+      K_classes <- dim(optional_theta)[2]
+    }else{
+      stop("You cannot have class_labs and optional_theta both NULL or non NULL")
+    }
   }else{
     K_classes <- 0
   }
@@ -74,7 +80,7 @@ class_topics <- function(counts,
                                trim = trim,
                                mash_user=mash_user);}
     else{
-      theta_known <- optional_theta;
+      theta_known <- class.normalizetpx(optional_theta + 1e-14, byrow=FALSE)
     }
   }
  
@@ -97,45 +103,32 @@ class_topics <- function(counts,
 #                             initopics, K_classes=K_classes, method="no.fix", shape, verb)
 #  }
   
+ 
   if(method != "no.fix"){
     if(K_classes < K){
-    initopics1 <- theta_known
-    K1 <- K - K_classes;
-    X1 <- X[1:min(ceiling(nrow(X)*.1),100),]
-#    if(K1==1){
-#       initopics2 <- class.tpxinit(X1, K1=2, initheta=NULL, 
-#                                  K_classes=K_classes, 
-#                                  method="no.fix", 
-#                                  shape, verb)
-#    }else{
-#       initopics2 <- class.tpxinit(X1, K1=K1, initheta=NULL, 
-#                                  K_classes=K_classes, 
-#                                  method="no.fix", 
-#                                  shape, verb)
-#    }
-    if(K1==1){
-         initopics2 <- tpxinit(X1, initheta=NULL, K1=2,
-                                shape, verb, init.adapt = FALSE)
-    }else{
-         initopics2 <- tpxinit(X1, initheta=NULL, K1=K1,
-                            shape, verb, init.adapt = FALSE)
-    }
-    initopics <- cbind(initopics1, 
-                       initopics2[,order(apply(initopics2,2, var), 
-                          decreasing=FALSE)[1:(K-K_classes)]])
+      initopics1 <- theta_known
+      K1 <- K - K_classes;
+      X1 <- X[1:min(ceiling(nrow(X)*.1),100),]
+      if(K1==1){
+        initopics2 <- tpxinit(X1, initheta=NULL, K1=2,
+                              shape, verb, init.adapt = FALSE)
+      }else{
+        initopics2 <- tpxinit(X1, initheta=NULL, K1=K1,
+                              shape, verb, init.adapt = FALSE)
+      }
+      initopics <- cbind(initopics1, 
+                         initopics2[,order(apply(initopics2,2, var), 
+                                           decreasing=FALSE)[1:(K-K_classes)]])
     }else{
       initopics <- theta_known;
     }
-  }
-  
-  if(method=="no.fix"){
-#    initopics <- class.tpxinit(X[1:min(ceiling(nrow(X)*.05),100),],
-#                               K1=K, initheta=NULL, K_classes = K_classes, 
-#                               method=method, shape, verb)
-    initopics2 <- tpxinit(X[1:min(ceiling(nrow(X)*.05),100)], 
+  }else{
+    initopics <- tpxinit(X[1:min(ceiling(nrow(X)*.05),100)], 
                           initheta=NULL, K1=K,
                           shape, verb, init.adapt = FALSE)
   }
+
+  
   
   cat("start the fit \n")
   ## either search for marginal MAP K and return bayes factors, or just fit

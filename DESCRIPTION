@@ -4,6 +4,7 @@ Version: 0.99.0
 Author: Kushal K. Dey <kkdey@uchicago.edu>
 Depends: R (>= 3.2.4), slam
 Suggests: MASS
+Imports: truncdist, ashr
 Description:  Posterior maximization for semi-supervised topic models (LDA). The methods are as described in Taddy (2012) `on estimation and selection for topic models'.  Previous versions of this code were included as part of the textir package.  If you want to take advantage of openmp parallelization, uncomment the relevant flags in src/MAKEVARS before compiling.
 Maintainer: Kushal K. Dey <kkdey@uchicago.edu>
 License: GPL-3

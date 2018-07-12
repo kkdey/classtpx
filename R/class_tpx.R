@@ -243,7 +243,8 @@ class.tpxfit <- function(X, known_samples, omega_known, theta, K_classes,
                              start=omega, theta=theta,  verb=0, nef=TRUE, 
                              wtol=wtol, tmax=20);
         }}else{ Wfit <- omega }
-
+    
+    
     
     
     ## joint parameter EM update
@@ -253,7 +254,11 @@ class.tpxfit <- function(X, known_samples, omega_known, theta, K_classes,
                            prior_omega=prior_omega,
                            grp=grp)
       if(K_classes < K){
-        move <- list(theta=cbind(theta[,1:K_classes],move1$theta[,((K_classes+1):K)]), omega=move1$omega)
+        if(K_classes == 0){
+          move <- list(theta=move1$theta[,((K_classes+1):K)], omega=move1$omega)
+        }else{
+          move <- list(theta=cbind(theta[,1:K_classes],move1$theta[,((K_classes+1):K)]), omega=move1$omega)
+        }
       }else{
         move <- list(theta=theta, omega=move1$omega)
       }
